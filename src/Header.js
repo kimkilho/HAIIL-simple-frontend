@@ -4,19 +4,20 @@ function Header(props) {
   }
 
   const datasetItems = [];
-  props.datasetObjs.forEach((datasetObj, i) => {
-    const datasetItem =
-      <li key={i}>
-        <a className={"dropdown-item" + (props.datasetObjIdx === i ? ' active' : '')}
-           onClick={() => handleDatasetOnClick(i)}>
-          { datasetObj.name + ' - ' + datasetObj.domain }
-        </a>
-      </li>;
-    datasetItems.push(datasetItem);
-  })
+  if (props.datasetObjs !== null) {
+    props.datasetObjs.forEach((datasetObj, i) => {
+      const datasetItem =
+        <li key={i}>
+          <a className={"dropdown-item" + (props.datasetObjIdx === i ? ' active' : '')}
+             onClick={() => handleDatasetOnClick(i)}>
+            { datasetObj.name + ' - ' + datasetObj.domain }
+          </a>
+        </li>;
+      datasetItems.push(datasetItem);
+    })
+  }
 
-  console.log(props.datasetObjs);
-  const selectedDatasetName = props.datasetObjs.length === 0 ?
+  const selectedDatasetName = props.datasetObjs === null ?
                                 'Datasets' :
                                 props.datasetObjs[props.datasetObjIdx].name + ' - ' +
                                 props.datasetObjs[props.datasetObjIdx].domain
