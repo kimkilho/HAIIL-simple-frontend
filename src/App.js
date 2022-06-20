@@ -20,7 +20,7 @@ function App() {
     { imageset: '', imageItemIdx: -1, imageFilename: '', imageBlob: null }
   );
 
-  const fetchAndSetDatasetObjs = async () => {
+  const readAndSetDatasetObjs = async () => {
     const response = await fetch(
       '/api/datasets/',
       { method: 'GET' }
@@ -32,7 +32,7 @@ function App() {
     }
   };
 
-  const fetchAndSetImageListsObj = async (datasetName, domainName) => {
+  const readAndSetImageListsObj = async (datasetName, domainName) => {
     const datasetId = `${datasetName}-${domainName}`;
     const imageListObj = { reviewed: null, nonreviewed: null };
     for (let imageset of ['reviewed', 'nonreviewed']) {
@@ -50,7 +50,7 @@ function App() {
     setImageListsObj({ ...imageListsObj, [datasetId]: imageListObj });
   };
 
-  const fetchImageBlob = async (datasetName, domainName, imageFilename)  => {
+  const readImageBlob = async (datasetName, domainName, imageFilename)  => {
     const response = await fetch(
       `/api/datasets/${datasetName}/domains/${domainName}/images/${imageFilename}`,
       { method: 'GET' },
@@ -64,7 +64,7 @@ function App() {
   const handleImageItemOnClick = async (imageset, imageFilename, i) => {
     const datasetName = datasetObjs[datasetObjIdx].name;
     const domainName = datasetObjs[datasetObjIdx].domain;
-    const imageBlob = await fetchImageBlob(datasetName, domainName, imageFilename);
+    const imageBlob = await readImageBlob(datasetName, domainName, imageFilename);
 
     setImageBeingReviewed({ ...imageBeingReviewed,
       imageset: imageset, imageItemIdx: i,
@@ -79,14 +79,14 @@ function App() {
 
   useEffect(() => {
     if (datasetObjs === null) {
-      fetchAndSetDatasetObjs();
+      readAndSetDatasetObjs();
     } else {
       const datasetName = datasetObjs[datasetObjIdx].name;
       const domainName = datasetObjs[datasetObjIdx].domain;
       const datasetId = `${datasetName}-${domainName}`;
 
       if (imageListsObj[datasetId] === undefined) {
-        fetchAndSetImageListsObj(datasetName, domainName);
+        readAndSetImageListsObj(datasetName, domainName);
       } else {
         const tempImageItems = { reviewed: [], nonreviewed: [] };
         ['nonreviewed', 'reviewed'].forEach((imageset) => {
