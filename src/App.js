@@ -16,6 +16,8 @@ function App() {
   const [datasetObjIdx, setDatasetObjIdx] = useState(0);
   const [imageListsObj, setImageListsObj] = useState({});    // { datasetId: { reviewed: [...], nonreviewed: [...] }
   const [imageItems, setImageItems] = useState({ reviewed: [], nonreviewed: [] });
+  const [imageItemIdx, setImageItemIdx] = useState(-1);
+  const [imageBlob, setImageBlob] = useState(null);
 
   const fetchDatasetObjs = async () => {
     const response = await fetch(
@@ -47,6 +49,25 @@ function App() {
     setImageListsObj({...imageListsObj, [datasetId]: imageListObj});
   };
 
+  const fetchImageBlob = async (datasetName, domainName, imageFilename)  => {
+    const response = await fetch(
+      `/api/datasets/${datasetName}/domains/${domainName}/images/${imageFilename}`,
+      { method: 'GET' },
+    );
+
+    if (response.status === 200) {
+      const imageBlob = await response.blob();
+      setImageBlob(imageBlob);
+    }
+  };
+
+  const handleImageItemOnClick = (imageFilename, i) => {
+    const datasetName = datasetObjs[datasetObjIdx].name;
+    const domainName = datasetObjs[datasetObjIdx].domain;
+    fetchImageBlob(datasetName, domainName, imageFilename);
+    setImageItemIdx(i);
+  }
+
   useEffect(() => {
     if (datasetObjs === null) {
       fetchDatasetObjs();
@@ -63,8 +84,11 @@ function App() {
           imageListsObj[datasetId][key].forEach((imageObj, i) => {
             const imageFilename = imageObj.name;
             const score = 0.999;    // FIXME
+            const activeFlag = i === imageItemIdx ? ' active' : '';
             const imageItem =
-              <a key={i} className="list-group-item list-group-item-action py-1 lh-sm" href="#" aria-current="true">
+              <a key={i} href="#" onClick={() => handleImageItemOnClick(imageFilename, i)}
+                 className={'list-group-item list-group-item-action py-1 lh-sm' + activeFlag}
+                 aria-current="true">
                 <div className="d-flex w-100 align-items-center justify-content-between">
                   <span className="mb-1">{ imageFilename }</span>
                   <strong>{ score }</strong>
@@ -76,7 +100,7 @@ function App() {
         setImageItems(tempImageItems);
       }
     }
-  }, [datasetObjs, datasetObjIdx, imageListsObj]);
+  }, [datasetObjs, datasetObjIdx, imageListsObj, imageItemIdx]);
 
   return (
     <main>
@@ -93,6 +117,7 @@ function App() {
           />
 
           <ImageReviewScreen
+            imageBlob={imageBlob}
           />
 
           <ImageList
