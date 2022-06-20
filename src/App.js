@@ -50,6 +50,18 @@ function App() {
     setImageListsObj({ ...imageListsObj, [datasetId]: imageListObj });
   };
 
+  const flagImageObjAsReviewInImageListsObj = async (datasetName, domainName, imageFilename) => {
+    const datasetId = `${datasetName}-${domainName}`;
+    const imageListObj = imageListsObj[datasetId];
+    const imageObj = imageListObj.nonreviewed.filter(obj => obj.name === imageFilename);
+    setImageListsObj({ ...imageListsObj,
+      [datasetId]: {
+        nonreviewed: imageListObj.nonreviewed.filter(obj => obj.name !== imageFilename),    // removal
+        reviewed: imageListObj.reviewed.concat(imageObj),    // addition
+      },
+    });
+  };
+
   const readImageBlob = async (datasetName, domainName, imageFilename)  => {
     const response = await fetch(
       `/api/datasets/${datasetName}/domains/${domainName}/images/${imageFilename}`,
@@ -92,6 +104,9 @@ function App() {
     if (response.status === 200) {
       const _labelObj = await response.json();
       setImageBeingReviewed({ ...imageBeingReviewed, label: _labelObj.label })
+
+      // Flag the image as 'reviewed'
+      flagImageObjAsReviewInImageListsObj(datasetName, domainName, imageFilename);
     }
   }
 
@@ -131,8 +146,7 @@ function App() {
             const imageFilename = imageObj.name;
             const score = 0.999;    // FIXME
             let activeFlag;
-            if (imageBeingReviewed.imageset === imageset &&
-                imageBeingReviewed.imageItemIdx === i)
+            if (imageBeingReviewed.imageFilename === imageObj.name)
               activeFlag = ' active';
             else
               activeFlag = '';
