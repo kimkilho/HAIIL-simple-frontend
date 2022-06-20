@@ -12,12 +12,12 @@ tooltipTriggerList.forEach(tooltipTriggerEl => {
 });
 
 function App() {
-  const [datasetObjs, setDatasetObjs] = useState(null);    // [...]
+  const [datasetObjs, setDatasetObjs] = useState([]);    // [...]
   const [datasetObjIdx, setDatasetObjIdx] = useState(0);
   const [imageListsObj, setImageListsObj] = useState({});    // { datasetId: { reviewed: [...], nonreviewed: [...] }
   const [imageItems, setImageItems] = useState({ reviewed: [], nonreviewed: [] });
   const [imageBeingReviewed, setImageBeingReviewed] = useState(
-    { imageset: '', imageItemIdx: -1, imageFilename: '', imageBlob: null }
+    { imageset: '', imageItemIdx: -1, imageFilename: '', imageBlob: null, label: -1 }
   );
 
   const readAndSetDatasetObjs = async () => {
@@ -27,8 +27,8 @@ function App() {
     );
 
     if (response.status === 200) {
-      const datasetData = await response.json();
-      setDatasetObjs(datasetData);
+      const _datasetObjs = await response.json();
+      setDatasetObjs(_datasetObjs);
     }
   };
 
@@ -61,24 +61,61 @@ function App() {
     }
   };
 
+  const readLabelObj = async (datasetName, domainName, imageFilename) => {
+    const response = await fetch(
+      `/api/datasets/${datasetName}/domains/${domainName}/images/${imageFilename}/labels/`,
+      { method: 'GET' },
+    );
+
+    if (response.status === 200) {
+      return await response.json();
+    }
+  };
+
+  const createAndSetLabel = async (datasetName, domainName, imageFilename, label) => {
+    const labeledAt = Date.now();    // unix timestamp (in milliseconds)
+    const data = {
+      dataset_name: datasetName, domain_name: domainName, image_filename: imageFilename,
+      label: label, labeled_at: labeledAt,
+    };
+    const response = await fetch(
+      '/api/labels',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      }
+    );
+
+    if (response.status === 200) {
+      const _labelObj = await response.json();
+      setImageBeingReviewed({ ...imageBeingReviewed, label: _labelObj.label })
+    }
+  }
+
   const handleImageItemOnClick = async (imageset, imageFilename, i) => {
     const datasetName = datasetObjs[datasetObjIdx].name;
     const domainName = datasetObjs[datasetObjIdx].domain;
     const imageBlob = await readImageBlob(datasetName, domainName, imageFilename);
+    const labelObj = await readLabelObj(datasetName, domainName, imageFilename);
 
     setImageBeingReviewed({ ...imageBeingReviewed,
       imageset: imageset, imageItemIdx: i,
-      imageFilename: imageFilename, imageBlob: imageBlob });
+      imageFilename: imageFilename, imageBlob: imageBlob,
+      label: labelObj.length > 0 ? labelObj[labelObj.length-1].label : -1,
+    });
   }
 
   const clearImageBeingReviewed = () => {
     setImageBeingReviewed(
-      { imageset: '', imageItemIdx: -1, imageFilename: '', imageBlob: null }
+      { imageset: '', imageItemIdx: -1, imageFilename: '', imageBlob: null, label: -1 }
     );
   };
 
   useEffect(() => {
-    if (datasetObjs === null) {
+    if (datasetObjs.length === 0) {
       readAndSetDatasetObjs();
     } else {
       const datasetName = datasetObjs[datasetObjIdx].name;
@@ -132,7 +169,9 @@ function App() {
           />
 
           <ImageReviewScreen
+            datasetBeingReviewed={datasetObjs.length === 0 ? null : datasetObjs[datasetObjIdx]}
             imageBeingReviewed={imageBeingReviewed}
+            createAndSetLabel={createAndSetLabel}
           />
 
           <ImageList

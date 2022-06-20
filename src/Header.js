@@ -18,7 +18,7 @@ function Header(props) {
     })
   }
 
-  const selectedDatasetName = props.datasetObjs === null ?
+  const selectedDatasetName = props.datasetObjs.length === 0 ?
                                 'Datasets' :
                                 props.datasetObjs[props.datasetObjIdx].name + ' - ' +
                                 props.datasetObjs[props.datasetObjIdx].domain
