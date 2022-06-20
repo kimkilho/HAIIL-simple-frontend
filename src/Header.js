@@ -34,7 +34,6 @@ function Header(props) {
               <button id="dropdownDataset" className="btn btn-secondary dropdown-toggle" type="button"
                       data-bs-toggle="dropdown" aria-expanded="false">
                 { selectedDatasetName }
-                {/*{ props.datasetObjs[props.datasetObjIdx] }*/}
               </button>
               <ul className="dropdown-menu" aria-labelledby="dropdownDataset">
                 { datasetItems }
