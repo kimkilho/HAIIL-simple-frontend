@@ -1,6 +1,7 @@
 function Header(props) {
   const handleDatasetOnClick = (i) => {
     props.setDatasetObjIdx(i);
+    props.clearImageBeingReviewed();
   }
 
   const datasetItems = [];
@@ -9,7 +10,7 @@ function Header(props) {
       const datasetItem =
         <li key={i}>
           <a className={"dropdown-item" + (props.datasetObjIdx === i ? ' active' : '')}
-             onClick={() => handleDatasetOnClick(i)}>
+             href="#" onClick={() => handleDatasetOnClick(i)}>
             { datasetObj.name + ' - ' + datasetObj.domain }
           </a>
         </li>;

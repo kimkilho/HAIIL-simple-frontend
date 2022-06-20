@@ -16,10 +16,11 @@ function App() {
   const [datasetObjIdx, setDatasetObjIdx] = useState(0);
   const [imageListsObj, setImageListsObj] = useState({});    // { datasetId: { reviewed: [...], nonreviewed: [...] }
   const [imageItems, setImageItems] = useState({ reviewed: [], nonreviewed: [] });
-  const [imageItemIdx, setImageItemIdx] = useState(-1);
-  const [imageBlob, setImageBlob] = useState(null);
+  const [imageBeingReviewed, setImageBeingReviewed] = useState(
+    { imageset: '', imageItemIdx: -1, imageFilename: '', imageBlob: null }
+  );
 
-  const fetchDatasetObjs = async () => {
+  const fetchAndSetDatasetObjs = async () => {
     const response = await fetch(
       '/api/datasets/',
       { method: 'GET' }
@@ -31,22 +32,22 @@ function App() {
     }
   };
 
-  const fetchImageListsObj = async (datasetName, domainName) => {
+  const fetchAndSetImageListsObj = async (datasetName, domainName) => {
     const datasetId = `${datasetName}-${domainName}`;
     const imageListObj = { reviewed: null, nonreviewed: null };
-    for (let key of ['reviewed', 'nonreviewed']) {
-      const requestUrlQuery = `?reviewed=${key === 'reviewed' ? 'true' : 'false'}`;
+    for (let imageset of ['reviewed', 'nonreviewed']) {
+      const requestUrlQuery = `?reviewed=${imageset === 'reviewed' ? 'true' : 'false'}`;
       const response = await fetch(
         `/api/datasets/${datasetName}/domains/${domainName}/images/${requestUrlQuery}`,
         { method: 'GET' },
       );
 
       if (response.status === 200) {
-        imageListObj[key] = await response.json();
+        imageListObj[imageset] = await response.json();
       }
     }
 
-    setImageListsObj({...imageListsObj, [datasetId]: imageListObj});
+    setImageListsObj({ ...imageListsObj, [datasetId]: imageListObj });
   };
 
   const fetchImageBlob = async (datasetName, domainName, imageFilename)  => {
@@ -56,37 +57,50 @@ function App() {
     );
 
     if (response.status === 200) {
-      const imageBlob = await response.blob();
-      setImageBlob(imageBlob);
+      return await response.blob();
     }
   };
 
-  const handleImageItemOnClick = (imageFilename, i) => {
+  const handleImageItemOnClick = async (imageset, imageFilename, i) => {
     const datasetName = datasetObjs[datasetObjIdx].name;
     const domainName = datasetObjs[datasetObjIdx].domain;
-    fetchImageBlob(datasetName, domainName, imageFilename);
-    setImageItemIdx(i);
+    const imageBlob = await fetchImageBlob(datasetName, domainName, imageFilename);
+
+    setImageBeingReviewed({ ...imageBeingReviewed,
+      imageset: imageset, imageItemIdx: i,
+      imageFilename: imageFilename, imageBlob: imageBlob });
   }
+
+  const clearImageBeingReviewed = () => {
+    setImageBeingReviewed(
+      { imageset: '', imageItemIdx: -1, imageFilename: '', imageBlob: null }
+    );
+  };
 
   useEffect(() => {
     if (datasetObjs === null) {
-      fetchDatasetObjs();
+      fetchAndSetDatasetObjs();
     } else {
       const datasetName = datasetObjs[datasetObjIdx].name;
       const domainName = datasetObjs[datasetObjIdx].domain;
       const datasetId = `${datasetName}-${domainName}`;
 
       if (imageListsObj[datasetId] === undefined) {
-        fetchImageListsObj(datasetName, domainName);
+        fetchAndSetImageListsObj(datasetName, domainName);
       } else {
         const tempImageItems = { reviewed: [], nonreviewed: [] };
-        ['nonreviewed', 'reviewed'].forEach((key) => {
-          imageListsObj[datasetId][key].forEach((imageObj, i) => {
+        ['nonreviewed', 'reviewed'].forEach((imageset) => {
+          imageListsObj[datasetId][imageset].forEach((imageObj, i) => {
             const imageFilename = imageObj.name;
             const score = 0.999;    // FIXME
-            const activeFlag = i === imageItemIdx ? ' active' : '';
+            let activeFlag;
+            if (imageBeingReviewed.imageset === imageset &&
+                imageBeingReviewed.imageItemIdx === i)
+              activeFlag = ' active';
+            else
+              activeFlag = '';
             const imageItem =
-              <a key={i} href="#" onClick={() => handleImageItemOnClick(imageFilename, i)}
+              <a key={i} href="#" onClick={() => handleImageItemOnClick(imageset, imageFilename, i)}
                  className={'list-group-item list-group-item-action py-1 lh-sm' + activeFlag}
                  aria-current="true">
                 <div className="d-flex w-100 align-items-center justify-content-between">
@@ -94,13 +108,13 @@ function App() {
                   <strong>{ score }</strong>
                 </div>
               </a>;
-            tempImageItems[key].push(imageItem);
+            tempImageItems[imageset].push(imageItem);
           });
         });
         setImageItems(tempImageItems);
       }
     }
-  }, [datasetObjs, datasetObjIdx, imageListsObj, imageItemIdx]);
+  }, [datasetObjs, datasetObjIdx, imageListsObj, imageBeingReviewed]);
 
   return (
     <main>
@@ -108,6 +122,7 @@ function App() {
         datasetObjs={datasetObjs}
         datasetObjIdx={datasetObjIdx}
         setDatasetObjIdx={setDatasetObjIdx}
+        clearImageBeingReviewed={clearImageBeingReviewed}
       />
       <div className="container">
         <div className="d-flex flex-nowrap">
@@ -117,7 +132,7 @@ function App() {
           />
 
           <ImageReviewScreen
-            imageBlob={imageBlob}
+            imageBeingReviewed={imageBeingReviewed}
           />
 
           <ImageList
