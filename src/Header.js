@@ -1,7 +1,7 @@
 function Header(props) {
   const handleDatasetOnClick = (i) => {
     props.setDatasetObjIdx(i);
-    props.clearImageBeingReviewed();
+    props.clearImageBeingReviewedInfoObj();
   }
 
   const datasetItems = [];
