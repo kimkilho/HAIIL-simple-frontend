@@ -84,7 +84,7 @@ function ImageReviewScreen(props) {
       </div>
       <div className="d-flex btn-toolbar align-items-center mt-1">
         { labelButtonItems }
-      </div>
+      </div> 
     </div>
   )
 }

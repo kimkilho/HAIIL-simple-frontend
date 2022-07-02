@@ -32,16 +32,21 @@ const ImageControl = styled.div`
 `;
 const DrawMenu = styled.div`
   grid-row: 2;
-  grid-column: 1 / span 3;
+  grid-column: 1 / span 3; 
+  border-bottom: 1px solid #313c4e;  
+  display: flex;
 `; 
 const ClassSection = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   grid-row: 3;
-  grid-column: 1;
+  grid-column: 1; 
+  margin-top: -1px;
+  border-right: 1px solid #313c4e;  
 `;
 const DefaultP = styled.p`
+  //color: black;
   color: #afbdd1;
   font-weight: 300;
   width: auto;
@@ -51,7 +56,7 @@ const DefaultP = styled.p`
 const Pver = styled(DefaultP)`
   writing-mode: vertical-lr;
   transform: rotate(180deg);
-  line-height: 10px;
+  line-height: 0px;
 `;
 const Btn = styled.div`
   width: 100px;
@@ -90,25 +95,22 @@ const ImageSection = forwardRef((props, ref) => {
     canvasRef.current.clearCanvas(); 
   }
 
-  function applyExistingLabels() {   
-    console.log("applyExistingLabels",props.labels); 
+  function applyExistingLabels() {    
     var templabels = [];
     if(props.labels != undefined)
     { 
       props.labels.forEach(label => {
 
         if(Object.keys(label).length !== 0)  
-        {
-          console.log("형변환 전",);
+        { 
           var _label = new Blob(label);
           templabels.push(_label);
-          var obj = _label.convertSVG();
-          console.log("converted",_label,obj); 
+          var obj = _label.convertSVG(); 
           canvasRef.current.drawingPolygon(obj); 
         }
         else
         {
-          console.log("스킵");
+          console.log("skip");
         } 
       })
     } 
@@ -132,9 +134,11 @@ const ImageSection = forwardRef((props, ref) => {
  
 
   var classes = [
-    new ImgClass(1, "", "palevioletred"),
+    new ImgClass(1, "", "#DB7093"),
     new ImgClass(2, "", "#DEEF73"),
     new ImgClass(3, "", "#719ADD"),
+    new ImgClass(4, "", "#FBD2A6"),
+    new ImgClass(5, "", "#14594B"),
   ];
   var drawManualTools = [
     {
@@ -328,9 +332,8 @@ const ImageSection = forwardRef((props, ref) => {
           </Btn> */}
         </ImageControl>
         <DrawMenu className="drawMenu">
-          <div id="tools" className="d-flex">
             <div></div>
-            <DefaultP>{toolIdx}</DefaultP>
+            {/* <DefaultP>{toolIdx}</DefaultP> */}
             <DefaultP>&nbsp;&nbsp;Manual&nbsp;Tools&nbsp;&nbsp;</DefaultP>
             {drawManualTools.map((value, i) => (
               <React.Fragment key={i}>
@@ -353,7 +356,6 @@ const ImageSection = forwardRef((props, ref) => {
                 ></DrawButton>
               </React.Fragment>
             ))}
-          </div>
         </DrawMenu>
         <ClassSection>
           <Pver>&nbsp;&nbsp;Classes&nbsp;&nbsp;</Pver>
@@ -366,7 +368,7 @@ const ImageSection = forwardRef((props, ref) => {
               ></ClassButton>
             </React.Fragment>
           ))}
-          <DefaultP>{classIdx}</DefaultP>
+          {/* <DefaultP>{classIdx}</DefaultP> */}
         </ClassSection>
         <ImageCanvas
           imgRef={props.imgRef}

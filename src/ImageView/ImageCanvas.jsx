@@ -17,9 +17,7 @@ const OutDiv = styled.div`
   position: relative;
 `;
 const Div = styled.div`
-  transform-origin: 0px 0px;
-  //transform: scale(1) translate(0px, 0px);
-
+  transform-origin: 0px 0px; 
   position: absolute;
   display: block;
   width: 100%;
@@ -63,11 +61,11 @@ const Btn = styled.button`
   }
 `;
 const DefaultP = styled.p`
-  color: #afbdd1;
+  color: #afbdd1; 
   font-weight: 300;
   width: auto;
-  font-size: 15px;
-  line-height: 40px;
+  font-size: 14px;
+  line-height: 30px;
 `;
 
 const ImageCanvas = forwardRef((props, ref) => {
@@ -79,16 +77,17 @@ const ImageCanvas = forwardRef((props, ref) => {
   }));
 
   function clearCanvas() {
+    setDrawing(false);
     while (props.svgRef.current.firstChild) {
       props.svgRef.current.removeChild(props.svgRef.current.firstChild);
     }
     drawingObjs.splice(0, drawingObjs.length);
   }
 
-  function drawingPolygon(obj) { 
+  function drawingPolygon(obj) {
     drawingObjs.push(obj);
-    props.svgRef.current.appendChild(drawingObjs[drawingObjs.length - 1])
-    setDrawingObjs(drawingObjs); 
+    props.svgRef.current.appendChild(drawingObjs[drawingObjs.length - 1]);
+    setDrawingObjs(drawingObjs);
   }
 
   // function drawingPolygon(blob) {
@@ -118,9 +117,12 @@ const ImageCanvas = forwardRef((props, ref) => {
   function changedToolorClass() {
     if (isDrawing) {
       setDrawing(false);
-      if (props.svgRef.current.lastChild.nodeName == "polyline") {
-        drawingObjs.splice(props.svgRef.current.lastChild, 1);
-        props.svgRef.current.removeChild(props.svgRef.current.lastChild);
+      if(props.svgRef.current.lastChild !== null)
+      { 
+        if (props.svgRef.current.lastChild.nodeName === "polyline") {
+          drawingObjs.splice(props.svgRef.current.lastChild, 1);
+          props.svgRef.current.removeChild(props.svgRef.current.lastChild);
+        }
       }
     }
     switch (props.toolIdx) {
@@ -148,13 +150,8 @@ const ImageCanvas = forwardRef((props, ref) => {
     }
   }
 
-  function applyStrokeThreshold() {
-    //console.log("수정전");
-    if (isDrawing) {
-      //var poly = ;
-      //poly.setAttribute("strokeWidth",props.thickness*2);
-      //props.svgRef.current.lastChild.style.styokesetAttribute("stroke-width",props.thickness*2);
-      //props.svgRef.current.lastChild.style.strokeWidth = props.thickness*2;
+  function applyStrokeThreshold() { 
+    if (isDrawing) { 
       if (drawingObjs[drawingObjs.length - 1].nodeName == "polygon")
         drawingObjs[drawingObjs.length - 1].style.strokeWidth = props.thickness;
       setDrawingObjs(drawingObjs);
@@ -168,62 +165,49 @@ const ImageCanvas = forwardRef((props, ref) => {
   const [lineCursor, setLineCursor] = useState(
     document.createElementNS("http://www.w3.org/2000/svg", "line")
   );
-  const [scale, setScale] = useState(1);
+
   const [isPanning, setPanning] = useState(false);
-  const [point, setPoint] = useState({ x: 0, y: 0 });
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale:1 });
   const [panStart, setPanStart] = useState({ x: 0, y: 0 }); //마우스 클릭이 되었을 때 당시의 위치
   const [isDrawing, setDrawing] = useState(false); //IsDrawing
-  const [drawingObjs, setDrawingObjs] = useState([]); 
+  const [drawingObjs, setDrawingObjs] = useState([]);
   const [currentCursor, setCurrentCursor] = useState("defualt");
-  //const [labels, setLabels] = useState([]);
+  //const [labels, setLabels] = useState([]); 
 
-  var lock = false;
-
-  //let polyline; //current drawing object(brush or polygon)
-  useEffect(() => {
-    setTransform();
-    circleCursor.style.strokeWidth = 1 / scale;
-  }, [scale]);
-
-  useEffect(() => {
-    setTransform();
-  }, [point]);
+  useEffect(()=> {
+    console.log("setTransform",transform);
+    applyTransform();
+  },[transform])
 
   useEffect(() => {
     console.log("useEffect");
-  }, [drawingObjs]); 
+  }, [drawingObjs]);
 
   function zoomIn() {
-    setScale(scale * 1.1);
+    setTransform({ ...transform, scale: transform.scale * 1.1 });
     setPanStart({
       x: 0,
       y: 0,
     });
-    //setTransform();
   }
 
   function zoomOut() {
-    setScale(scale / 1.1);
+    setTransform({ ...transform, scale: transform.scale / 1.1 });
     setPanStart({
       x: 0,
       y: 0,
     });
-    //setTransform();
   }
 
   function reset() {
-    var s = defaultScale();
-    console.log("defaultscale", s);
-    setPoint({
-      x: defaultPointX(),
-      y: defaultPointY(),
-    });
+    let _scale = defaultScale();
+    let _x = defaultPointX(_scale);
+    let _y = defaultPointY(_scale);
+    setTransform({ x: _x, y: _y, scale: _scale }); 
     setPanStart({
       x: 0,
       y: 0,
     });
-    lock = true;
-    setScale(s);
   }
 
   function zoomFit() {
@@ -257,10 +241,9 @@ const ImageCanvas = forwardRef((props, ref) => {
     }
   }
 
-  function defaultPointX() {
-    console.log("defaultPointX");
+  function defaultPointX(_scale) {
     if (props.imgW != null) {
-      var realW = props.imgW * scale;
+      var realW = props.imgW * _scale;
       var style =
         props.imgRef.current.currentStyle ||
         window.getComputedStyle(props.imgRef.current, false);
@@ -268,15 +251,16 @@ const ImageCanvas = forwardRef((props, ref) => {
 
       var offset = w - realW;
 
+      console.log("defaultPointX", props.imgW, _scale, realW, w);
       return offset / 2;
     } else {
       return 0;
     }
   }
-  function defaultPointY() {
+  function defaultPointY(_scale) {
     console.log("defaultPointY");
     if (props.imgW != null) {
-      var realH = props.imgH * scale;
+      var realH = props.imgH * _scale;
       var style =
         props.imgRef.current.currentStyle ||
         window.getComputedStyle(props.imgRef.current, false);
@@ -300,7 +284,58 @@ const ImageCanvas = forwardRef((props, ref) => {
   }
 
   function handleKeyDown(e) {
-    //console.log(e);
+    switch (e.key) {
+      case "Enter":
+        if (isDrawing) {
+          drawingDone();
+        }
+        break;
+    }
+  }
+
+  function drawingDone() {
+    if (props.toolIdx == 3 /*polyline*/) {
+      console.log("polyline complete");
+      stopPolyline(coords.x, coords.y);
+      circleCursor.style.strokeWidth = 1 / transform.scale;
+      circleCursor.style.stroke = props.selectedClass.classColor;
+      setCircleCursor(circleCursor);
+
+      //end polyline
+      let b = new Blob(
+        props.labels.length,
+        props.selectedClass.index,
+        props.selectedClass.classColor,
+        "polyline",
+        props.thickness,
+        null,
+        drawingObjs[drawingObjs.length - 1]
+      );
+      props.labels.push(b);
+    } else if (props.toolIdx == 4 /*polygon*/) {
+      console.log("polygon complete");
+      var pt = drawingObjs[drawingObjs.length - 1].points[0];
+      addPoint(pt.x, pt.y);
+      stopPolyline();
+      circleCursor.style.strokeWidth = 1 / transform.scale;
+      circleCursor.setAttribute("r", 0.5);
+      circleCursor.style.stroke = props.selectedClass.classColor;
+      drawingObjs[drawingObjs.length - 1].style.strokeWidth = 1;
+      setCircleCursor(circleCursor);
+
+      console.log("클래스인덱스", props.selectedClass);
+      let b = new Blob(
+        props.labels.length,
+        props.selectedClass.index,
+        props.selectedClass.classColor,
+        "polygon",
+        props.thickness,
+        null,
+        drawingObjs[drawingObjs.length - 1]
+      );
+      props.labels.push(b);
+      console.log(props.labels);
+    }
   }
 
   function handleMouseEnter(e) {
@@ -313,7 +348,7 @@ const ImageCanvas = forwardRef((props, ref) => {
       case 3: //polyline
         circleCursor.style.clientX = e.clientX;
         circleCursor.style.clientY = e.clientY;
-        circleCursor.style.strokeWidth = 1 / scale;
+        circleCursor.style.strokeWidth = 1 / transform.scale;
         circleCursor.setAttribute("r", props.thickness / 2);
         circleCursor.style.stroke = props.selectedClass.classColor;
         circleCursor.style.fill = "none";
@@ -322,7 +357,7 @@ const ImageCanvas = forwardRef((props, ref) => {
       case 4: //polygon
         circleCursor.style.clientX = e.clientX;
         circleCursor.style.clientY = e.clientY;
-        circleCursor.style.strokeWidth = 1 / scale;
+        circleCursor.style.strokeWidth = 1 / transform.scale;
         circleCursor.setAttribute("r", 0.5);
         circleCursor.style.stroke = props.selectedClass.classColor;
         circleCursor.style.fill = "none";
@@ -349,13 +384,13 @@ const ImageCanvas = forwardRef((props, ref) => {
           return;
         }
         setPanStart({
-          x: e.clientX - point.x,
-          y: e.clientY - point.y,
+          x: e.clientX - transform.x,
+          y: e.clientY - transform.y,
         });
         setPanning(true);
         break;
       case 1: //eraser
-        if (e.target.nodeName === "polyline") { 
+        if (e.target.nodeName === "polyline") {
           removeObj(e.target, drawingObjs.indexOf(e.target));
         }
         break;
@@ -375,26 +410,8 @@ const ImageCanvas = forwardRef((props, ref) => {
           var len = drawingObjs[drawingObjs.length - 1].points.length;
           var pt = drawingObjs[drawingObjs.length - 1].points[len - 1];
           var dist = getRealDist(pt, coords);
-          if (dist <= 3) {
-            console.log("complete");
-            stopPolyline(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-            drawingObjs[drawingObjs.length - 1].style.stroke = "0";
-            circleCursor.style.strokeWidth = 1 / scale;
-            circleCursor.style.stroke = props.selectedClass.classColor;
-            setCircleCursor(circleCursor);
-
-            //end polyline
-            let b = new Blob(
-              props.labels.length,
-              props.selectedClass.index,
-              props.selectedClass.classColor,
-              "polyline",
-              props.thickness,
-              null,
-              drawingObjs[drawingObjs.length - 1]
-            );
-            props.labels.push(b);
-            console.log(props.labels);
+          if (dist <= 5) {
+            drawingDone();
           } else {
             addPoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
           }
@@ -406,35 +423,8 @@ const ImageCanvas = forwardRef((props, ref) => {
         else {
           var pt = drawingObjs[drawingObjs.length - 1].points[0];
           var dist = getRealDist(pt, coords);
-          if (dist < 3) {
-            console.log("complete :", pt, coords);
-            addPoint(pt.x, pt.y);
-            stopPolyline(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-            circleCursor.style.strokeWidth = 1 / scale;
-            circleCursor.setAttribute("r", 0.5);
-            circleCursor.style.stroke = props.selectedClass.classColor;
-            drawingObjs[drawingObjs.length - 1].style.strokeWidth = 1;
-            setCircleCursor(circleCursor);
-            //end polygon
-
-            // this.no = no ?? 0;
-            // this.classId = classId ?? 0;
-            // this.classColor = classColor ?? "black";
-            // this.type = type ?? "polyline";
-            // this.thickness = thickness ?? 1;
-            // this.data = [];
-            console.log("클래스인덱스",props.selectedClass);
-            let b = new Blob(
-              props.labels.length,
-              props.selectedClass.index,
-              props.selectedClass.classColor,
-              "polygon",
-              props.thickness,
-              null,
-              drawingObjs[drawingObjs.length - 1]
-            );
-            props.labels.push(b);
-            console.log(props.labels);
+          if (dist <= 5) {
+            drawingDone();
           } else {
             addPoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
           }
@@ -463,7 +453,7 @@ const ImageCanvas = forwardRef((props, ref) => {
             null,
             drawingObjs[drawingObjs.length - 1]
           );
-          props.labels.push(b); 
+          props.labels.push(b);
           console.log(props.labels);
         }
         break;
@@ -488,11 +478,16 @@ const ImageCanvas = forwardRef((props, ref) => {
         if (!isPanning) {
           return;
         }
-        setPoint({
+        // setPoint({
+        //   x: e.clientX - panStart.x,
+        //   y: e.clientY - panStart.y,
+        // });
+        setTransform({
+          ...transform,
           x: e.clientX - panStart.x,
           y: e.clientY - panStart.y,
         });
-        setTransform();
+        applyTransform();
         break;
       case 1:
       case 1: //eraser
@@ -516,21 +511,21 @@ const ImageCanvas = forwardRef((props, ref) => {
           var len = drawingObjs[lastIdx].points.length;
           var pt = drawingObjs[lastIdx].points[len - 1];
           if (e.buttons == 1) {
-            if (
-              pt.x !== e.nativeEvent.offsetX ||
-              pt.y !== e.nativeEvent.offsetY
-            )
+            // if (
+            //   pt.x !== e.nativeEvent.offsetX ||
+            //   pt.y !== e.nativeEvent.offsetY
+            // )
               addPoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
           }
           // var dist = Math.sqrt(
           //   Math.pow(pt.x - coords.x, 2) + Math.pow(pt.y - coords.y, 2)
           // );
           var dist = getRealDist(pt, coords);
-          if (dist <= 5 / scale) {
-            circleCursor.style.strokeWidth = 5 / scale;
+          if (dist <= 5 / transform.scale) {
+            circleCursor.style.strokeWidth = 5 / transform.scale;
             circleCursor.style.stroke = "red";
           } else {
-            circleCursor.style.strokeWidth = 1 / scale;
+            circleCursor.style.strokeWidth = 1 / transform.scale;
             circleCursor.style.stroke = props.selectedClass.classColor;
           }
         }
@@ -545,12 +540,12 @@ const ImageCanvas = forwardRef((props, ref) => {
           }
           var pt = drawingObjs[drawingObjs.length - 1].points[0];
           dist = getRealDist(pt, coords);
-          if (dist <= 5 / scale) {
-            circleCursor.style.strokeWidth = 5 / scale;
+          if (dist <= 5 / transform.scale) {
+            circleCursor.style.strokeWidth = 5 / transform.scale;
             circleCursor.style.stroke = "red";
-            circleCursor.setAttribute("r", 5 / scale);
+            circleCursor.setAttribute("r", 5 / transform.scale);
           } else {
-            circleCursor.style.strokeWidth = 1 / scale;
+            circleCursor.style.strokeWidth = 1 / transform.scale;
             circleCursor.style.stroke = props.selectedClass.classColor;
             circleCursor.setAttribute("r", 0.5);
           }
@@ -562,31 +557,32 @@ const ImageCanvas = forwardRef((props, ref) => {
     }
   }
 
-  function removeObj(target,index)
-  { 
+  function removeObj(target, index) {
     props.svgRef.current.removeChild(target);
     drawingObjs.splice(target, 1);
-    setDrawingObjs(drawingObjs); 
-    props.labels.splice(index,1);
+    setDrawingObjs(drawingObjs);
+    props.labels.splice(index, 1);
   }
 
   function handleWheel(e) {
-    var xs = (e.clientX - point.x) / scale,
-      ys = (e.clientY - point.y) / scale,
+    var xs = (e.clientX - transform.x) / transform.scale,
+      ys = (e.clientY - transform.y) / transform.scale,
       delta = e.nativeEvent.wheelDelta
         ? e.nativeEvent.wheelDelta
         : -e.nativeEvent.deltaY;
-    delta > 0 ? setScale(scale * 1.2) : setScale(scale / 1.2);
 
-    setPoint({
-      x: e.clientX - xs * scale,
-      y: e.clientY - ys * scale,
+    let _scale =  delta > 0 ? transform.scale * 1.2 : transform.scale / 1.2;  
+    setTransform({
+      x: e.clientX - xs * _scale,
+      y: e.clientY - ys * _scale,
+      scale: _scale,
     });
   }
   function handleZoomFit(e) {
-    setPoint({
+    setTransform({
       x: defaultPointX(),
       y: defaultPointY(),
+      scale: transform.scale,
     });
     console.log("handleZoomFit");
     zoomFit();
@@ -598,9 +594,9 @@ const ImageCanvas = forwardRef((props, ref) => {
     zoomOut();
   }
 
-  function setTransform() {
+  function applyTransform() {
     var val =
-      "translate(" + point.x + "px, " + point.y + "px) scale(" + scale + ")";
+      "translate(" + transform.x + "px, " + transform.y + "px) scale(" + transform.scale + ")";
     props.imgRef.current.style.transform = val;
     console.log(val);
   }
@@ -611,27 +607,24 @@ const ImageCanvas = forwardRef((props, ref) => {
       "polyline"
     );
 
-    var stroke = _stroke ? _stroke : 1 / scale;
+    var stroke = _stroke ? _stroke : 1 / transform.scale;
 
     poly.style.strokeLinejoin = "round";
     poly.style.strokeWidth = stroke;
-    poly.style.strokeOpacity = ".5";
-
-    poly.shapeRendering = "crispEdges;";
+    poly.style.strokeOpacity = ".5";  
+    //poly.shapeRendering = "crispEdges;";
     if (_stroke) {
-      poly.style.fill = "none";
-      poly.style.tagName = props.labels.length.toString();
-        //"Brush," + stroke * 2 + "," + props.selectedClass.index;
+      poly.style.strokeOpacity = "0.5";
+      poly.style.fill = "none"; 
     } else {
-      poly.style.fill = props.selectedClass.classColor;
-      poly.style.tagName = props.labels.length.toString();
-        //"Polygon," + stroke * 2 + "," + props.selectedClass.index; 
+      poly.style.strokeOpacity = "1";
+      poly.style.fill = props.selectedClass.classColor; 
     }
     poly.style.strokeLinecap = "round";
     poly.style.stroke = props.selectedClass.classColor;
     poly.style.fillOpacity = ".3";
 
-    console.log("sef",poly.style.tagName);
+    console.log("sef", poly.style.tagName);
     return poly;
   }
 
@@ -655,6 +648,13 @@ const ImageCanvas = forwardRef((props, ref) => {
 
   function addPoint(_x, _y) {
     var poly = drawingObjs[drawingObjs.length - 1];
+    if(poly.points.length > 0)
+    { 
+      let pt = poly.points[poly.points.length-1]; 
+      if (pt.x === _x && pt.y === _y)
+        return;
+    }
+
     var points = poly.getAttribute("points");
     var val = `${_x},${_y} `;
     if (points === null) points = val;
@@ -686,9 +686,9 @@ const ImageCanvas = forwardRef((props, ref) => {
       </Div>
       <BtmDiv>
         <DefaultP>
-          (x:{coords.x} y:{coords.y}), {(scale * 100).toFixed(0)}%
+          (x:{coords.x} y:{coords.y}) Scale : {(transform.scale * 100).toFixed(0)}%
         </DefaultP>
-        <DefaultP>&nbsp;&nbsp;&nbsp;label : {props.labels.length}</DefaultP>
+        <DefaultP>&nbsp;&nbsp;&nbsp;Labels : {props.labels.length}</DefaultP>
         <Btn
           className="zoom zoom-plus material-icons"
           id="zoom-plus"

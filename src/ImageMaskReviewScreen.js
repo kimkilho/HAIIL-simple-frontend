@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import ImageSection from "../src/ImageView/ImageSection"
+import styled from "styled-components";
 
+const MainDiv = styled.div` 
+  //background-color: #212936; 
+`; 
 
 const getCursorPosition = (canvas, event) => {
   const rect = canvas.getBoundingClientRect();
@@ -147,7 +151,7 @@ function ImageMaskReviewScreen(props) {
         svg.style.width = image.width.toString();
         svg.style.height = image.height.toString();
         
-        console.log("img size",image.width, image.height);
+        //console.log("img size",image.width, image.height);
         setImgSize({width: image.width, height: image.height});
       
         setClassBeingReviewedIdx(-1);
@@ -161,8 +165,7 @@ function ImageMaskReviewScreen(props) {
         //   tempPointsObj[classIdx] = [];
         // }
 
-        setLabels([]); 
-        //기존 마스크 드로잉
+        //setLabels([]);  
         //Load existing mask and draw (if any) and put its data into maskObj
         imgSectionref.current.clearCanvas();
         const existingMask = props.imageBeingReviewedInfoObj.mask;   
@@ -171,28 +174,14 @@ function ImageMaskReviewScreen(props) {
         {
           setLabels(Object.values(existingMask.labels));
           imgSectionref.current.applyExistingLabels();
-        }
-
-        // Load existing mask and draw (if any) and put its data into maskObj
-        // console.log('Load existing mask (if any)');
-        // const existingMask = props.imageBeingReviewedInfoObj.mask;
-        // for (let classIdx in existingMask) {
-        //   const polygons = existingMask[classIdx];
-        //   for (let polygon of polygons) {
-        //     // Draw polygons using the points from the existing mask
-        //     drawPolygonForClass(context, classIdx, polygon);
-
-        //     // Add drawn polygon to mask data
-        //     tempMaskObj[classIdx].push(polygon);
-        //   }
-        // }
+        } 
+        
         //setMaskObj(tempMaskObj);
         //setPointsObj(tempPointsObj);
         URL.revokeObjectURL(imageURL);
       };
       image.src = imageURL;
       svg.style.backgroundImage = "url('" + image.src + "')";
-      //svg.style.backgroundPosition = "center";
       svg.style.backgroundRepeat = "no-repeat";  
     } else {
       //context.clearRect(0, 0, canvas.width, canvas.height);
@@ -228,14 +217,15 @@ function ImageMaskReviewScreen(props) {
   }, [pointsObj, drawPolygonWithPoints]);
 
   return (
-    <div className="col-sm-6 px-md-4 align-items-center">
+    <MainDiv className="col-sm-6 px-md-4 align-items-center">
       <div className="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 className="h4">Review Screen</h1>
       </div>
       <div className="d-flex justify-content-between">
         <h2 className="h5">{props.imageBeingReviewedInfoObj.imageFilename}</h2>
         <h2 className="h5">0.999</h2>
-      </div>
+      </div> 
+
       <div className="d-flex align-items-center">
         <ImageSection
           imgRef={imgRef}
@@ -255,9 +245,9 @@ function ImageMaskReviewScreen(props) {
           onClick={addPointForClassBeingReviewed}
         /> */}
       </div>
-      <div className="d-flex btn-toolbar align-items-center mt-1">
+      {/* <div className="d-flex btn-toolbar align-items-center mt-1">
         {classButtonItems}
-      </div>
+      </div> */}
       <div className="d-flex btn-toolbar align-items-center mt-1">
         <button
           type="button"
@@ -266,8 +256,8 @@ function ImageMaskReviewScreen(props) {
         >
           SUBMIT
         </button>
-      </div>
-    </div>
+      </div> 
+    </MainDiv>
   );
 }
 
