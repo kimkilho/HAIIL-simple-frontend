@@ -1,22 +1,3 @@
-export default class ImageInfo {
-  img: any;
-  name: string;
-  class: ImgClass;
-  label: Label;
-  imgWidth: number;
-  imgHeight: number;
-
-  constructor(_name, _w, _h) {
-    //this.file = _filepath;
-    //this.img = _img; //현재는 일단 파일경로, 추후엔 다른 정보로 대체?
-    this.name = _name;
-    //this.class = undefined;
-    this.label = new Label();
-    this.imgWidth = _w;
-    this.imgHeight = _h;
-  }
-}
-
 export class ImgClass {
   index = 0;
   name: string;
@@ -27,12 +8,7 @@ export class ImgClass {
     this.name = _name;
     this.classColor = _color;
   }
-}
-
-class Label {
-  blobs = [];
-}
-
+} 
 export class Blob {
   public no: number;
   public classId: number;
@@ -43,20 +19,24 @@ export class Blob {
 
   public constructor(...array: any[]) {
     if (array.length === 1) {
-      Object.assign(this, array[0]); 
+      Object.assign(this, array[0]);
     } else {
       this.no = array[0];
       this.classId = array[1];
       this.classColor = array[2];
       this.type = array[3];
-      this.thickness = this.type === "polygon" ? 1 : array[4];
+      if (this.type === "polygon") this.thickness = 1;
+      else if (this.type === "polyline") this.thickness = array[4];
+      else {
+        this.thickness = 1;
+      }
       this.data = []; //[5]
 
       if (array[6]) {
         Array.from(array[6].points).forEach((pt) => {
           this.data.push([(pt as SVGPoint).x, (pt as SVGPoint).y]);
         });
-      } else this.data = array[5]; 
+      } else this.data = array[5];
     }
   }
   
@@ -66,24 +46,31 @@ export class Blob {
       "polyline"
     );
     poly.style.strokeLinejoin = "round";
+    console.log(this.thickness);
     poly.style.strokeWidth = this.thickness.toString(); 
     poly.style.shapeRendering = "crispEdges";
     poly.style.strokeLinecap = "round";
     poly.style.stroke = this.classColor;
-    poly.style.fillOpacity = "0.5";
 
     switch (this.type) {
       case "polyline":
         poly.style.strokeOpacity = "0.5";
         poly.style.fill = "none";
+        poly.style.fillOpacity = "0.5";
         break;
       case "polygon":
         poly.style.strokeOpacity = "1";
         poly.style.fill = this.classColor;
+        poly.style.fillOpacity = "0.4";
+        break;
+      case "predict":
+        poly.style.strokeOpacity = "1";
+        poly.style.fill = this.classColor;
+        poly.style.fillOpacity = "0.3";
+        poly.style.strokeDasharray = "3 3"; 
         break;
     }
-
-    //var poly = drawingObjs[drawingObjs.length - 1];
+ 
     var points = poly.getAttribute("points");
     this.data.forEach(val => {
       var pt = `${val[0]},${val[1]} `;

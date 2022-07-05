@@ -1,8 +1,6 @@
-import React, { useCallback, useState, useEffect, forwardRef, useImperativeHandle } from "react";
-//import "../style/imageSection.css";
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import "../index.css";
-import ImageInfo, { ImgClass, Blob } from "./imageinfo.tsx";
-//import BlobData from "./imageinfo.tsx";
+import { ImgClass, Blob } from "./imageinfo.tsx"; 
 import ClassButton from "./buttons/ClassButton";
 import DrawButton from "./buttons/DrawButton";
 import ImageCanvas from "./ImageCanvas";
@@ -78,60 +76,21 @@ const Btn = styled.div`
 
 
 const ImageSection = forwardRef((props, ref) => {
-//export default function ImageSection({ svgRef, imgRef, imgs, setInfo, labels }) {
-
-  var files;
-  ///var svgRef = React.useRef(null);
-  //var imgRef = React.useRef(null);
-  var canvasRef = React.useRef({});
-
   useImperativeHandle(ref, () => ({
-    applyExistingLabels,
-    clearCanvas,
+    applyExistingMasks,
+    clearCanvas: () => {
+      canvasRef.current.clearCanvas();
+    },
+    zoomFit: () => {
+      canvasRef.current.zoomFit();
+    },
   }));
 
-  function clearCanvas()
-  {
-    canvasRef.current.clearCanvas(); 
-  }
-
-  function applyExistingLabels() {    
-    var templabels = [];
-    if(props.labels != undefined)
-    { 
-      props.labels.forEach(label => {
-
-        if(Object.keys(label).length !== 0)  
-        { 
-          var _label = new Blob(label);
-          templabels.push(_label);
-          var obj = _label.convertSVG(); 
-          canvasRef.current.drawingPolygon(obj); 
-        }
-        else
-        {
-          console.log("skip");
-        } 
-      })
-    } 
- 
-    props.setLabels(templabels);
-  }
-
-  // function oldapplyExistingLabels() {  
-  //   var classCount = Object.keys(props.labels).length;
-  //   console.log("classCount",classCount);
-  //   canvasRef.current.clearCanvas();
-  //   for (var i = 0; i < classCount; i++) {
-  //     var blobs = Object.values(Object.values(props.labels));
-  //     console.log(blobs); 
-
-  //     blobs.forEach(blob => {
-  //       canvasRef.current.drawingPolygon(blob);
-  //     })
-  //   }  
-  // }
- 
+  var canvasRef = React.useRef({});
+  const [toolIdx, setToolIdx] = useState(0);
+  const [classIdx, setClassIdx] = useState(0);
+  const [strokethickness, setStrokeThickness] = useState(5);
+  const [threshold, setThreshold] = useState(100);
 
   var classes = [
     new ImgClass(1, "", "#DB7093"),
@@ -173,13 +132,6 @@ const ImageSection = forwardRef((props, ref) => {
     },
   ];
 
-  //const arrclass = new Array();
-  //const arrImageInfo = new Array();
-  const [toolIdx, setToolIdx] = useState(0);
-  const [classIdx, setClassIdx] = useState(0);
-  const [strokethickness, setStrokeThickness] = useState(5);
-  const [threshold, setThreshold] = useState(100);
-
   useEffect(() => {
     setToolIdx(0);
     setClassIdx(0);
@@ -192,113 +144,21 @@ const ImageSection = forwardRef((props, ref) => {
   useEffect(() => {
     canvasRef.current.applyStrokeThreshold();
   }, [strokethickness, threshold]);
-
-  // function prevImage() {
-  //   if (files != null) {
-  //     if (curIdx == 0) return;
-
-  //     backupblob(curIdx);
-  //     curIdx--;
-  //     loadImage(curIdx);
-  //     loadblob(curIdx);
-  //     //zoomFit();
-  //   }
-  // }
-
-  // function nextImage() {
-  //   if (files != null) {
-  //     if (curIdx + 1 == files.length) return;
-
-  //     backupblob(curIdx);
-  //     curIdx++;
-  //     loadImage(curIdx);
-  //     loadblob(curIdx);
-  //     //zoomFit();
-  //   }
-  // }
-
-  function handleLoadfiles(e) {
-    if (e.target.files.length > 0) {
-      console.log("open file");
-      files = e.target.files;
-
-      var cnt = 0;
-      for (var file of files) {
-        loadImage(file, cnt++);
-      }
-
-      //그려진 object들 삭제
-      while (props.svgRef.current.firstChild) {
-        props.svgRef.current.removeChild(props.svgRef.current.firstChild);
+ 
+  function applyExistingMasks() {
+    var tempMaskObjs = [];
+    if (props.maskObjs != undefined) { 
+      for(let mask of props.maskObjs)
+      {
+        var obj = mask.convertSVG();
+        canvasRef.current.addObj(obj);
       }
     }
-  }
-
-  function loadImage(filepath, cnt) {
-    var img = new Image();
-    img.src = URL.createObjectURL(filepath);
-    img.onload = function () {
-      props.svgRef.current.style.width = img.width.toString();
-      props.svgRef.current.style.height = img.height.toString();
-      URL.revokeObjectURL(img.src);
-
-      // var info = new ImageInfo(filepath.name, img.width, img.height);
-      // info.img = img;
-      // console.log("imgs",info.img);
-      // imgs.push(info);
-      // setInfo([...imgs]);
-    };
-
-    props.svgRef.current.style.backgroundImage = "url('" + img.src + "')";
-    props.svgRef.current.style.backgroundPosition = "center";
-    props.svgRef.current.style.backgroundRepeat = "no-repeat";
-  }
-
-  // function backupblob(idx, bRemoveOld = false) {
-  //   if (bRemoveOld === true) {
-  //     while (arrImageInfo.firstChild) {
-  //       arrImageInfo.removeChild(arrImageInfo.firstChild);
-  //     }
-  //   }
-  //   for (var v of svgRef.current.children) {
-  //     if (v.nodeName != "circle") {
-  //       var tags = v.style.tagName.split(",");
-  //       var blob = new BlobData(tags[0], tags[1], tags[2], v); //type, strokethickness, classidx, svg data
-  //       arrImageInfo[idx].label.blobs.push(blob);
-  //     }
-  //   }
-  //   if (bRemoveOld === false) {
-  //     while (svgRef.current.firstChild) {
-  //       svgRef.current.removeChild(svgRef.current.firstChild);
-  //     }
-  //   }
-  // }
-
-  // function loadblob(idx) {
-  //   for (var v of arrImageInfo[idx].label.blobs) {
-  //     svgRef.current.appendChild(v.data);
-  //   }
-  //   while (arrImageInfo.firstChild) {
-  //     arrImageInfo.removeChild(arrImageInfo.firstChild);
-  //   }
-  // }
-
-  function handleChangeClass(idx) {
-    setClassIdx(idx);
-    //console.log("change class:" + classIdx);
-  }
-  function handleChangeTool(idx) {
-    setToolIdx(idx);
-    //console.log("handleChangeTool:" +toolIdx);
-  }
-  function handleChangeStroke(thickness) {
-    setStrokeThickness(thickness);
-    //console.log("handleChangeTool:" + strokethickness);
+    props.setMaskObjs(tempMaskObjs);
   }
 
   return (
     <Main className="imageSection">
-      {/* <div className="moduletitle">Human Labeler</div> */}
       <Inner className="inner">
         <ImageControl className="image-control">
           <DefaultP>&nbsp;&nbsp;Thickness&nbsp;:</DefaultP>
@@ -317,45 +177,32 @@ const ImageSection = forwardRef((props, ref) => {
             setValue={setThreshold}
           ></Slider>
           <DefaultP>{threshold}</DefaultP>
-          {/* <Btn>
-            <label className="loadfile" htmlFor="chooseFile">
-              UPLOAD
-            </label>
-            <input 
-              type="file"
-              id="chooseFile"
-              name="chooseFile"
-              multiple
-              accept="image/*"
-              onChange={handleLoadfiles.bind(this)}
-            />
-          </Btn> */}
         </ImageControl>
         <DrawMenu className="drawMenu">
-            <div></div>
-            {/* <DefaultP>{toolIdx}</DefaultP> */}
-            <DefaultP>&nbsp;&nbsp;Manual&nbsp;Tools&nbsp;&nbsp;</DefaultP>
-            {drawManualTools.map((value, i) => (
-              <React.Fragment key={i}>
-                <DrawButton
-                  idx={value.idx}
-                  icon={value.icon}
-                  CheckedIdx={toolIdx}
-                  click={handleChangeTool.bind(this)}
-                ></DrawButton>
-              </React.Fragment>
-            ))}
-            <DefaultP>&nbsp;&nbsp;AI-Assisted&nbsp;Tools&nbsp;&nbsp;</DefaultP>
-            {drawAssistTools.map((value, i) => (
-              <React.Fragment key={i}>
-                <DrawButton
-                  idx={value.idx}
-                  icon={value.icon}
-                  CheckedIdx={toolIdx}
-                  click={handleChangeTool.bind(this)}
-                ></DrawButton>
-              </React.Fragment>
-            ))}
+          <div></div>
+          {/* <DefaultP>{toolIdx}</DefaultP> */}
+          <DefaultP>&nbsp;&nbsp;Manual&nbsp;Tools&nbsp;&nbsp;</DefaultP>
+          {drawManualTools.map((value, i) => (
+            <React.Fragment key={i}>
+              <DrawButton
+                idx={value.idx}
+                icon={value.icon}
+                CheckedIdx={toolIdx}
+                click={setToolIdx.bind(this)}
+              ></DrawButton>
+            </React.Fragment>
+          ))}
+          <DefaultP>&nbsp;&nbsp;AI-Assisted&nbsp;Tools&nbsp;&nbsp;</DefaultP>
+          {drawAssistTools.map((value, i) => (
+            <React.Fragment key={i}>
+              <DrawButton
+                idx={value.idx}
+                icon={value.icon}
+                CheckedIdx={toolIdx}
+                click={setToolIdx.bind(this)}
+              ></DrawButton>
+            </React.Fragment>
+          ))}
         </DrawMenu>
         <ClassSection>
           <Pver>&nbsp;&nbsp;Classes&nbsp;&nbsp;</Pver>
@@ -364,7 +211,7 @@ const ImageSection = forwardRef((props, ref) => {
               <ClassButton
                 classIndex={i}
                 classColor={value.classColor}
-                click={handleChangeClass.bind(this)}
+                click={setClassIdx.bind(this)}
               ></ClassButton>
             </React.Fragment>
           ))}
@@ -379,25 +226,12 @@ const ImageSection = forwardRef((props, ref) => {
           thickness={strokethickness}
           thireshold={threshold}
           selectedClass={classes.at(classIdx)}
-          labels = {props.labels}
+          maskObjs={props.maskObjs}
           ref={canvasRef}
         ></ImageCanvas>
       </Inner>
     </Main>
   );
-
 });
 
 export default ImageSection;
-
-
-{
-  /* <div className="search">
-          <button className="btn btn--small" id="btn-prev">
-            Prev
-          </button>
-          <button className="btn btn--small" id="btn-next">
-            Next
-          </button>
-        </div> */
-}

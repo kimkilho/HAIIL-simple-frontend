@@ -3,115 +3,319 @@ import './App.css';
 import Header from './Header';
 import ImageList from './ImageList';
 import ImageMaskReviewScreen from './ImageMaskReviewScreen';
-import ModelListFooter from './ModelListFooter';
+import NetListFooter from './NetListFooter';
 import {
   readDatasetObjs, readImageObjs, readImageBlob, readMaskObjs, createMask,
+  readSegNetObjs, readPredMaskObjs, requestSegNetTrain,
 } from './requests';
 
-const bootstrap = require('bootstrap');
-const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-tooltipTriggerList.forEach(tooltipTriggerEl => {
-  new bootstrap.Tooltip(tooltipTriggerEl);
-});
+// const bootstrap = require('bootstrap');
+// // Enable tooltips
+// const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+// tooltipTriggerList.forEach(tooltipTriggerEl => {
+//   new bootstrap.Tooltip(tooltipTriggerEl);
+// });
+// // Enable popovers
+// const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+// const popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+//   return new bootstrap.Popover(popoverTriggerEl, {html: true});
+// });
 
 function SegmentationApp() {
-  const [datasetObjs, setDatasetObjs] = useState([]);
-    // [ { id: <int>, name: <string>, domain: <string|null>, classes: <object> } ]
-  const [datasetObjIdx, setDatasetObjIdx] = useState(0);    // int
-  const [imageListsNestedObj, setImageListsNestedObj] = useState({});
-    /*
-      {
-        <str>: {
-          reviewed: [ { id: <int>, dataset_id: <int>, gt_label: <int|null>, gt_mask: <int|null> } ],
-          nonreviewed: [ { id: <int>, dataset_id: <int>, gt_label: <int|null>, gt_mask: <int|null> } ],
+  // ------------- States for holding the whole data received from the backend ------------------
+  const [datasetObjs, setDatasetObjs] = useState({});
+  /*
+    {
+      (datasetId) <int>: {
+        id: <int>, name: <string>, domain: <string|null>, classes: <object>
+      }
+    }
+   */
+  const [segNetListsNestedObj, setSegNetListsNestedObj] = useState({});
+  /*
+    {
+      (datasetId) <int>: {
+        (segNetId) <int>: {
+          id: <int>, dataset_id: <int>, name: <string>, version: <int>, train_mask_ids: [<int>],
+          job_id: <string>, status: <string>,
         }
       }
-     */
+    }
+   */
+  const [imageListsNestedObj, setImageListsNestedObj] = useState({});
+  /*
+    {
+      (datasetId) <int>: {
+        reviewed: [ { id: <int>, dataset_id: <int>, gt_label: <int|null>, gt_mask: <int|null> } ],
+        nonreviewed: [ { id: <int>, dataset_id: <int>, gt_label: <int|null>, gt_mask: <int|null> } ],
+      }
+    }
+   */
+  const [predMaskListsNestedObj, setPredMaskListsNestedObj] = useState({});
+  /*
+    {
+      (segNetId) <int>: {
+        (imageId) <int>: { id: <int>, image_id: <int>, segnet_id: <int>, scores: <object|null>, mask: <object|null> }
+      }
+    }
+   */
+
+  // ------------------ States for HTML elements that depend on the data above -----------------
+  const [datasetItems, setDatasetItems] = useState([]);   // [ <HTML element> ]
   const [imageItems, setImageItems] = useState({ reviewed: [], nonreviewed: [] });
     // { reviewed: [ <HTML element> ], nonreviewed: [ <HTML element> ] }
-  const [imageBeingReviewedInfoObj, setImageBeingReviewedInfoObj] = useState(
-    { imageset: '', imageItemIdx: -1, imageFilename: '', imageBlob: null, mask: {} }
+  const [segNetItems, setSegNetItems] = useState([]);   // [ <HTML element> ]
+
+  // ------------------ States for tracking the currently selected objects ---------------------
+  const [selectedDatasetId, setSelectedDatasetId] = useState(1);    // int (default dataset id: 1)
+  const [selectedImageInfoObj, setSelectedImageInfoObj] = useState(
+    { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: {}, segNetId: 0, predMask: {} }
   );
-    // { imageset: <string>, imageItemIdx: <int>, imageFilename: <string>, imageBlob: <Blob>, mask: <object> }
+  /*
+    {
+      imageset: <string>, imageId: <int>, imageFilename: <string>, imageBlob: <Blob>, mask: <object>,
+      segNetId: <int>, predMask: <object>
+    }
+  */
+  const [ongoingTrainJobExists, setOngoingTrainJobExists] = useState({});    // { (dataset_id) <int>: <bool> }
+
 
   const readAndSetDatasetObjs = async () => {
-    setDatasetObjs(await readDatasetObjs());
-  }
-
-  const readAndSetImageListsNestedObj = async (datasetName, domainName) => {
-    const datasetKey = `${datasetName}-${domainName}`;
-    const imageListsObj = { reviewed: null, nonreviewed: null };
-
-    for (let imageset of ['reviewed', 'nonreviewed']) {
-      const reviewed = imageset === 'reviewed';
-      imageListsObj[imageset] = await readImageObjs(datasetName, domainName, 'segmentation', reviewed);
+    const datasetObjsList = await readDatasetObjs();
+    const tempDatasetObjs = {};
+    for (let datasetObj of datasetObjsList) {
+      const datasetId = datasetObj.id;
+      tempDatasetObjs[datasetId] = datasetObj;
     }
 
-    setImageListsNestedObj({ ...imageListsNestedObj, [datasetKey]: imageListsObj })
+    setDatasetObjs(tempDatasetObjs);
   };
 
-  const flagImageObjAsReviewInImageListsNestedObj = async (datasetName, domainName, imageFilename) => {
-    const datasetKey = `${datasetName}-${domainName}`;
-    const imageListsObj = imageListsNestedObj[datasetKey];
+  const readAndSetSegNetObjs = async (datasetId) => {
+    const segNetObjsList = await readSegNetObjs(datasetId);
+    const tempSegNetObjs = {};
+    let repeat = false;
+    for (let segNetObj of segNetObjsList) {
+      const segNetId = segNetObj.id;
+      tempSegNetObjs[segNetId] = segNetObj;
+
+      const jobStatus = segNetObj.status;
+      if (!(jobStatus === 'SUCCESS' || jobStatus === 'FAILURE')) {
+        repeat = true;
+      }
+    }
+    setSegNetListsNestedObj({
+      ...segNetListsNestedObj,
+      [datasetId]: tempSegNetObjs,
+    });
+
+    // Call this function repeatedly if there is any ongoing training job
+    if (repeat === true) {
+      setOngoingTrainJobExists({
+        ...ongoingTrainJobExists,
+        [datasetId]: true,
+      });
+      setTimeout(() => {
+        readAndSetSegNetObjs(datasetId);
+      }, 1000);
+    } else {
+      setOngoingTrainJobExists({
+        ...ongoingTrainJobExists,
+        [datasetId]: false,
+      });
+    }
+  };
+
+  const readAndSetImageListsNestedObj = async (datasetId) => {
+    if (!(datasetId in imageListsNestedObj)) {
+      const tempImageListsObj = { reviewed: null, nonreviewed: null };
+
+      for (let imageset of ['reviewed', 'nonreviewed']) {
+        const reviewed = imageset === 'reviewed';
+        tempImageListsObj[imageset] = await readImageObjs(datasetId, 'segmentation', reviewed);
+      }
+
+      setImageListsNestedObj({ ...imageListsNestedObj, [datasetId]: tempImageListsObj })
+    }
+  };
+
+  const flagImageObjAsReviewInImageListsNestedObj = async (datasetId, imageFilename) => {
+    const imageListsObj = imageListsNestedObj[datasetId];
     const imageObj = imageListsObj.nonreviewed.filter(obj => obj.name === imageFilename);
     setImageListsNestedObj({ ...imageListsNestedObj,
-      [datasetKey]: {
+      [datasetId]: {
         nonreviewed: imageListsObj.nonreviewed.filter(obj => obj.name !== imageFilename),    // removal
         reviewed: imageListsObj.reviewed.concat(imageObj),    // addition
       },
     });
   };
 
-  const createAndSetMask = async (datasetName, domainName, imageFilename, mask) => {
+  const createAndSetMask = async (datasetId, datasetName, domainName, imageFilename, mask) => {
     const _maskObj = await createMask(datasetName, domainName, imageFilename, mask);
-    setImageBeingReviewedInfoObj({ ...imageBeingReviewedInfoObj, mask: _maskObj.mask });
+    setSelectedImageInfoObj({ ...selectedImageInfoObj, mask: _maskObj.mask });
 
     // Flag the image as 'reviewed'
-    flagImageObjAsReviewInImageListsNestedObj(datasetName, domainName, imageFilename);
+    flagImageObjAsReviewInImageListsNestedObj(datasetId, imageFilename);
   };
 
-  const handleImageItemOnClick = async (imageset, imageFilename, i) => {
-    const { id, name, domain, classes } = datasetObjs[datasetObjIdx];
-    const imageBlob = await readImageBlob(name, domain, imageFilename);
-    const maskObjs = await readMaskObjs(name, domain, imageFilename);
+  const handleImageItemOnClick = async (imageset, imageId, imageFilename) => {
+    const imageBlob = await readImageBlob(imageId);
+    const maskObjs = await readMaskObjs(imageId);
 
-    setImageBeingReviewedInfoObj({ ...imageBeingReviewedInfoObj,
-      imageset: imageset, imageItemIdx: i,
-      imageFilename: imageFilename, imageBlob: imageBlob,
-      mask: maskObjs.length > 0 ? maskObjs[maskObjs.length-1].mask : [],
+    let maskData = {};
+    if (maskObjs.length > 0)
+      maskData = maskObjs[maskObjs.length-1].mask;
+
+    let predMaskData = {};
+    const selectedSegNetId = selectedImageInfoObj.segNetId;
+    if ((selectedSegNetId > 0) && (imageId in predMaskListsNestedObj[selectedSegNetId])) {
+      predMaskData = predMaskListsNestedObj[selectedSegNetId][imageId].mask;
+    }
+
+    setSelectedImageInfoObj({
+      ...selectedImageInfoObj,
+      imageset: imageset, imageId: imageId, imageFilename: imageFilename, imageBlob: imageBlob,
+      mask: maskData, predMask: predMaskData,
     });
   }
 
-  const clearImageBeingReviewedInfoObj = () => {
-    setImageBeingReviewedInfoObj(
-      { imageset: '', imageItemIdx: -1, imageFilename: '', imageBlob: null, mask: {} }
+  const clearSelectedImageInfoObj = () => {
+    setSelectedImageInfoObj(
+      { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: {}, segNetId: 0, predMask: {} }
     );
   };
 
+  const handleSegNetItemOnClick = async (segNetId) => {
+    const selectedImageId = selectedImageInfoObj.imageId;
+
+    if (!(segNetId in predMaskListsNestedObj) ||
+        Object.keys(predMaskListsNestedObj[segNetId]).length === 0) {
+      // Fetch and add a new predMask list object for given segNetId
+      const predMaskObjs = await readPredMaskObjs(segNetId);
+      const tempPredMaskListObj = {};
+      for (let predMaskObj of predMaskObjs) {
+        const imageId = predMaskObj['image_id'];
+        tempPredMaskListObj[imageId] = predMaskObj;
+      }
+
+      // Change the mask data if an image is selected now
+      if (selectedImageId > 0) {
+        // only if there is any predMask data
+        if (selectedImageId in tempPredMaskListObj) {
+          setSelectedImageInfoObj({
+            ...selectedImageInfoObj,
+            predMask: tempPredMaskListObj[selectedImageId].mask,
+            segNetId: segNetId,
+          });
+        } else {
+          setSelectedImageInfoObj({
+            ...selectedImageInfoObj,
+            predMask: {},
+            segNetId: segNetId,
+          });
+        }
+      } else {
+        setSelectedImageInfoObj({
+          ...selectedImageInfoObj,
+          segNetId: segNetId,
+        })
+      }
+
+      setPredMaskListsNestedObj( {
+        ...predMaskListsNestedObj, [segNetId]: tempPredMaskListObj,
+      });
+    } else {
+      // Change the mask data if an image is selected now
+      if (selectedImageId > 0) {
+        // only if there is any predMask data
+        if (selectedImageId in predMaskListsNestedObj[segNetId]) {
+          setSelectedImageInfoObj({
+            ...selectedImageInfoObj,
+            predMask: predMaskListsNestedObj[segNetId][selectedImageId].mask,
+            segNetId: segNetId,
+          });
+        } else {
+          setSelectedImageInfoObj({
+            ...selectedImageInfoObj,
+            predMask: {},
+            segNetId: segNetId,
+          });
+        }
+      } else {
+        setSelectedImageInfoObj({
+          ...selectedImageInfoObj,
+          segNetId: segNetId,
+        })
+      }
+    }
+  };
+
+  const requestSegNetTrainOnSelectedDataset = async () => {
+    const { name: datasetName, domain: domainName } = datasetObjs[selectedDatasetId];
+    const responseData = await requestSegNetTrain(datasetName, domainName, 'mask', 5) // FIXME later: Expose hyperparameters
+    // const { job_id: jobId, job_status: jobStatus } = responseData;
+
+    // Call readAndSetSegNetObjs function to start interval, if there is no ongoing training job
+    if (!(selectedDatasetId in ongoingTrainJobExists) || (ongoingTrainJobExists[selectedDatasetId] === false)) {
+      setOngoingTrainJobExists({
+        ...ongoingTrainJobExists,
+        [selectedDatasetId]: true,
+      });
+      setTimeout(() => readAndSetSegNetObjs(selectedDatasetId), 1000);    // wait for 1000 ms to apply above line
+    }
+  };
+
+  const handleDatasetOnClick = (id) => {
+    setSelectedDatasetId(id);
+    clearSelectedImageInfoObj();
+  }
+
   useEffect(() => {
-    if (datasetObjs.length === 0) {
+    if (Object.keys(datasetObjs).length === 0) {
+      // Read and set datasets
       readAndSetDatasetObjs();
     } else {
-      const { id, name, domain, classes } = datasetObjs[datasetObjIdx];
-      const datasetKey = `${name}-${domain}`;
+      const tempDatasetItems = [];
+      for (let datasetId in datasetObjs) {
+        datasetId = parseInt(datasetId);    // NOTE: This must be added because for...in loop automatically converts the iterator to string
+        const { id, name: datasetName, domain: domainName, classes } = datasetObjs[datasetId];
+        const datasetItem =
+          <li key={datasetId}>
+            <a className={"dropdown-item" + (selectedDatasetId === datasetId ? ' active' : '')}
+               href="#" onClick={() => handleDatasetOnClick(datasetId)}>
+              {datasetName + ' - ' + domainName}
+            </a>
+          </li>;
+        tempDatasetItems.push(datasetItem);
+      }
+      setDatasetItems(tempDatasetItems);
+    }
+  }, [datasetObjs, selectedDatasetId]);
 
-      if (imageListsNestedObj[datasetKey] === undefined) {
-        readAndSetImageListsNestedObj(name, domain);
+  useEffect(() => {
+    if (Object.keys(datasetObjs).length > 0) {
+      const { id: datasetId } = datasetObjs[selectedDatasetId];
+
+      // Read and set up image list
+      if (imageListsNestedObj[datasetId] === undefined) {
+        readAndSetImageListsNestedObj(datasetId);
       } else {
         const tempImageItems = { reviewed: [], nonreviewed: [] };
         ['nonreviewed', 'reviewed'].forEach((imageset) => {
-          imageListsNestedObj[datasetKey][imageset].forEach((imageObj, i) => {
+          imageListsNestedObj[datasetId][imageset].forEach((imageObj, i) => {
+            const imageId = imageObj.id;
             const imageFilename = imageObj.name;
-            const score = 0.999;    // FIXME
+            const score = 0.999;    // FIXME later
             let activeFlag;
-            if (imageBeingReviewedInfoObj.imageFilename === imageObj.name)
+            if (selectedImageInfoObj.imageId === imageId)
               activeFlag = ' active';
             else
               activeFlag = '';
             const imageItem =
-              <a key={i} href="#" onClick={() => handleImageItemOnClick(imageset, imageFilename, i)}
+              <a key={imageId} href="#" onClick={() => handleImageItemOnClick(imageset, imageId, imageFilename)}
                  className={'list-group-item list-group-item-action py-1 lh-sm' + activeFlag}
-                 aria-current="true">
+                 aria-current="true"
+              >
                 <div className="d-flex w-100 align-items-center justify-content-between">
                   <span className="mb-1">{ imageFilename }</span>
                   <strong>{ score }</strong>
@@ -123,15 +327,62 @@ function SegmentationApp() {
         setImageItems(tempImageItems);
       }
     }
-  }, [datasetObjs, datasetObjIdx, imageListsNestedObj, imageBeingReviewedInfoObj]);
+  }, [datasetObjs, selectedDatasetId, imageListsNestedObj, selectedImageInfoObj,
+           predMaskListsNestedObj]);
+
+  useEffect(() => {
+    if (Object.keys(datasetObjs).length > 0) {
+      // Read and set up segnet list
+      if (!(selectedDatasetId in segNetListsNestedObj)) {
+        readAndSetSegNetObjs(selectedDatasetId);
+      } else {
+        const selectedSegNetId = selectedImageInfoObj.segNetId;
+        const tempSegNetItems = [];
+
+        // Add segnet items that are (1) already trained or (2) being trained
+        for (let segNetId in segNetListsNestedObj[selectedDatasetId]) {
+          segNetId = parseInt(segNetId);    // NOTE: This must be added because for...in loop automatically converts the iterator to string
+          const { name: segNetName, version: segNetVersion, train_mask_ids: trainMaskIds,
+                  job_id: jobId, status: jobStatus } = segNetListsNestedObj[selectedDatasetId][segNetId];
+
+          let trainSetSize = 0;
+          if (trainMaskIds !== null) {
+            trainSetSize = trainMaskIds.length;
+          }
+          const segNetItemClassNamePostfix = selectedSegNetId === segNetId ? 'btn-success text-white' : '';
+
+          const segNetItem =
+            <button key={segNetId} onClick={() => handleSegNetItemOnClick(segNetId)}
+                    className={`btn btn-sm btn-outline-success me-2 py-3 ${segNetItemClassNamePostfix}`}
+                    style={{ fontSize: '0.8rem' }}
+            >
+              <p className="text-left mb-0">{ segNetName }</p>
+              <p className="text-left mb-0">(ver. { segNetVersion }: { trainSetSize } train samples)</p>
+              <p className="text-left mb-0"><small>(Status: { jobStatus })</small></p>
+              <p className="text-left mb-0"><small>(Job id: { jobId })</small></p>
+            </button>;
+          tempSegNetItems.push(segNetItem);
+        }
+        setSegNetItems(tempSegNetItems);
+      }
+    }
+  }, [datasetObjs, selectedDatasetId, segNetListsNestedObj,
+           selectedImageInfoObj.segNetId, selectedImageInfoObj.imageId]);
+
+  let selectedDatasetObj;
+  if (Object.keys(datasetObjs).length > 0 && selectedDatasetId > 0) {
+    selectedDatasetObj = datasetObjs[selectedDatasetId];
+  } else {
+    selectedDatasetObj = null;
+  }
 
   return (
     <main>
       <Header
-        datasetObjs={datasetObjs}
-        datasetObjIdx={datasetObjIdx}
-        setDatasetObjIdx={setDatasetObjIdx}
-        clearImageBeingReviewedInfoObj={clearImageBeingReviewedInfoObj}
+        datasetItems={datasetItems}
+        selectedDatasetItemName={selectedDatasetObj === null ?
+                                  'Datasets' :
+                                  selectedDatasetObj.name + ' - ' + selectedDatasetObj.domain}
       />
       <div className="container">
         <div className="d-flex flex-nowrap">
@@ -141,8 +392,8 @@ function SegmentationApp() {
           />
 
           <ImageMaskReviewScreen
-            datasetBeingReviewedObj={datasetObjs.length === 0 ? null : datasetObjs[datasetObjIdx]}
-            imageBeingReviewedInfoObj={imageBeingReviewedInfoObj}
+            selectedDatasetObj={selectedDatasetObj}
+            selectedImageInfoObj={selectedImageInfoObj}
             createAndSetMask={createAndSetMask}
           />
 
@@ -153,7 +404,9 @@ function SegmentationApp() {
         </div>
       </div>
 
-      <ModelListFooter
+      <NetListFooter
+        segNetItems={segNetItems}
+        requestSegNetTrainOnSelectedDataset={requestSegNetTrainOnSelectedDataset}
       />
     </main>
 

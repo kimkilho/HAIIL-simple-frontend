@@ -25,13 +25,14 @@ function ImageReviewScreen(props) {
       image.onload = () => {
         svg.style.width = image.width.toString();
         svg.style.height = image.hieght.toString();
-        
+          
+
         URL.revokeObjectURL(image.src);
       };
-      
       svg.style.backgroundImage = "url('" + image.src + "')";
       svg.style.backgroundPosition = "center";
       svg.style.backgroundRepeat = "no-repeat"; 
+      
 
       // const imageURL = URL.createObjectURL(props.imageBeingReviewed.imageBlob);
       // const image = new Image();

@@ -39,11 +39,7 @@ export default class RadioButton extends React.Component {
       classColor: props.classColor,
     };
   }
- 
-//   handleChange = (e) => { 
-//     console.log(e.target); 
-//   };
-
+  
   render() {
     const { classIndex, classColor } = this.state;
     return (
@@ -51,9 +47,8 @@ export default class RadioButton extends React.Component {
         <Input
           id={classIndex}
           value={classIndex}
-          name="classColor" //이게 맞아야 같은 그룹으로 엮임
-          type="radio" 
-        //   onChange={this.handleChange.bind(this)}
+          name="classColor" //for button group
+          type="radio"  
           onChange={(e) => this.props.click(this.state.classIndex)}
         />
         <Div style={{ backgroundColor: classColor }}></Div>

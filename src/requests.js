@@ -1,38 +1,52 @@
-const readDatasetObjs = async () => {
-  const response = await fetch(
-    '/api/datasets/',
-    { method: 'GET' }
-  );
+const sendGETRequestAndGetJsonResponseData = async (url) => {
+  const response = await fetch(url, { method: 'GET' });
 
   if (response.status === 200) {
     return await response.json();
   } else {
     throw new Error('Unable to fetch response body.');
   }
+}
+
+const readDatasetObjs = async () => {
+  return await sendGETRequestAndGetJsonResponseData(
+    '/api/datasets/', 'GET',
+  );
 };
 
-const readImageObjs = async (datasetName, domainName, task = 'classification', reviewed = false) => {
+const readDatasetObj = async (datasetId) => {
+  return await sendGETRequestAndGetJsonResponseData(
+    `/api/datasets/${datasetId}`, 'GET',
+  );
+};
+
+const readSegNetObjs = async (datasetId) => {
+  return await sendGETRequestAndGetJsonResponseData(
+    `/api/datasets/${datasetId}/segnets/`, 'GET',
+  );
+};
+
+const readPredMaskObjs = async (segNetId) => {
+  return await sendGETRequestAndGetJsonResponseData(
+    `/api/segnets/${segNetId}/predmasks/`, 'GET',
+  );
+};
+
+const readImageObjs = async (datasetId, task = 'classification', reviewed = false) => {
   // task: {'classification', 'segmentation'}
   if (!['classification', 'segmentation'].includes(task)) {
     throw new Error('Invalid input for task argument.');
   }
+  const requestUrlQuery = `task=${task}&reviewed=${reviewed ? 'true' : 'false'}`;
 
-  const requestUrlQuery = `?task=${task}&reviewed=${reviewed ? 'true' : 'false'}`;
-  const response = await fetch(
-    `/api/datasets/${datasetName}/domains/${domainName}/images/${requestUrlQuery}`,
-    { method: 'GET' },
+  return await sendGETRequestAndGetJsonResponseData(
+    `/api/datasets/${datasetId}/images?${requestUrlQuery}`, 'GET',
   );
-
-  if (response.status === 200) {
-    return await response.json();
-  } else {
-    throw new Error('Unable to fetch response body.');
-  }
 };
 
-const readImageBlob = async (datasetName, domainName, imageFilename)  => {
+const readImageBlob = async (imageId) => {
   const response = await fetch(
-    `/api/datasets/${datasetName}/domains/${domainName}/images/${imageFilename}`,
+    `/api/images/${imageId}/file`,
     { method: 'GET' },
   );
 
@@ -43,30 +57,16 @@ const readImageBlob = async (datasetName, domainName, imageFilename)  => {
   }
 };
 
-const readLabelObjs = async (datasetName, domainName, imageFilename) => {
-  const response = await fetch(
-    `/api/datasets/${datasetName}/domains/${domainName}/images/${imageFilename}/labels/`,
-    { method: 'GET' },
+const readLabelObjs = async (imageId) => {
+  return await sendGETRequestAndGetJsonResponseData(
+    `/api/images/${imageId}/labels/`, 'GET',
   );
-
-  if (response.status === 200) {
-    return await response.json();
-  } else {
-    throw new Error('Unable to fetch response body.');
-  }
 };
 
-const readMaskObjs = async (datasetName, domainName, imageFilename) => {
-  const response = await fetch(
-    `/api/datasets/${datasetName}/domains/${domainName}/images/${imageFilename}/masks/`,
-    { method: 'GET' },
+const readMaskObjs = async (imageId) => {
+  return await sendGETRequestAndGetJsonResponseData(
+    `/api/images/${imageId}/masks/`, 'GET',
   );
-
-  if (response.status === 200) {
-    return await response.json();
-  } else {
-    throw new Error('Unable to fetch response body.');
-  }
 };
 
 const createLabel = async (datasetName, domainName, imageFilename, label) => {
@@ -98,13 +98,7 @@ const createMask = async (datasetName, domainName, imageFilename, mask) => {
   const data = {
     dataset_name: datasetName, domain_name: domainName, image_filename: imageFilename,
     mask: mask, masked_at: maskedAt,
-  };
-    console.log("createMask",data.mask);
-    var d = JSON.stringify(data);
-  //  console.log("createMask2",d);
-
-  //  var d2 = JSON.parse(d);
-  //  console.log("createMask3",d2);
+  }; 
 
   const response = await fetch(
     '/api/masks',
@@ -124,5 +118,24 @@ const createMask = async (datasetName, domainName, imageFilename, mask) => {
   }
 }
 
-export { readDatasetObjs, readImageObjs, readImageBlob,
-         readLabelObjs, readMaskObjs, createLabel, createMask, };
+const requestSegNetTrain = async (datasetName, domainName, predOutputType = 'mask', numEpochs = 10) => {
+  const data = {
+    dataset_name: datasetName, domain_name: domainName, pred_output_type: predOutputType, num_epochs: numEpochs,
+  };
+  const response = await fetch(
+    '/api/segnets/train',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    }
+  );
+
+  return await response.json();
+};
+
+export { readDatasetObjs, readDatasetObj, readImageObjs, readImageBlob,
+         readLabelObjs, readMaskObjs, createLabel, createMask,
+         readSegNetObjs, readPredMaskObjs, requestSegNetTrain, };

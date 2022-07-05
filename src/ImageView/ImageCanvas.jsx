@@ -1,13 +1,11 @@
 import React, {
-  forwardRef,
-  useCallback,
+  forwardRef, 
   useEffect,
   useImperativeHandle,
   useState,
   useRef,
 } from "react";
-import styled from "styled-components";
-import { IconEraser } from "./Icons";
+import styled from "styled-components"; 
 import eraser from "../svgs/eraser.svg";
 import { Blob } from "./imageinfo.tsx";
 
@@ -72,10 +70,37 @@ const ImageCanvas = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => ({
     changedToolorClass,
     applyStrokeThreshold,
-    drawingPolygon,
+    addObj,
     clearCanvas,
+    zoomFit,
   }));
 
+  const refBorder = useRef(null);
+  const [coord, setCoord] = useState({ x: 0, y: 0 }); //current cursor position(relative to image)
+  const [circleCursor, setCircleCursor] = useState(
+    document.createElementNS("http://www.w3.org/2000/svg", "circle")
+  );
+  const [lineCursor, setLineCursor] = useState(
+    document.createElementNS("http://www.w3.org/2000/svg", "line")
+  );
+  const [isPanning, setPanning] = useState(false);
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale:1 });
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 }); // position when the mouse clicked for panning.
+  const [isDrawing, setDrawing] = useState(false); //IsDrawing
+  const [drawingObjs, setDrawingObjs] = useState([]);
+  const [currentCursor, setCurrentCursor] = useState("defualt"); 
+
+  useEffect(()=> {
+    //console.log("setTransform",transform);
+    applyTransform();
+  },[transform]) 
+
+  useEffect(()=> { 
+    circleCursor.setAttribute("cx", coord.x);
+    circleCursor.setAttribute("cy", coord.y);
+    setCircleCursor(circleCursor);
+  },[coord]) 
+ 
   function clearCanvas() {
     setDrawing(false);
     while (props.svgRef.current.firstChild) {
@@ -84,36 +109,12 @@ const ImageCanvas = forwardRef((props, ref) => {
     drawingObjs.splice(0, drawingObjs.length);
   }
 
-  function drawingPolygon(obj) {
+  function addObj(obj) {
     drawingObjs.push(obj);
     props.svgRef.current.appendChild(drawingObjs[drawingObjs.length - 1]);
     setDrawingObjs(drawingObjs);
   }
-
-  // function drawingPolygon(blob) {
-  //   var blobs = Object.values(blob);
-  //   console.log("drawingPolygon", blobs);
-
-  //   for (var i = 0; i < blobs.length; i++) {
-  //     var blob = Object.values(blobs[i]);
-  //     for (var j = 0; j < blob.length; j++) {
-  //       var pt = blob[j];
-  //       //console.log("pt",pt);
-  //       if (j == 0) {
-  //         startPolyline({ x: pt[0], y: pt[1] });
-  //       } else if (j == blob.length - 1) {
-  //         addPoint(pt[0], pt[1]);
-  //         addPoint(blob[0][0], blob[0][1]);
-  //         stopPolyline(pt[0], pt[1]);
-  //         drawingObjs[drawingObjs.length - 1].style.strokeWidth = 1;
-  //         //drawingObjs[drawingObjs.length - 1].style.strokeDasharray = "";
-  //       } else {
-  //         addPoint(pt[0], pt[1]);
-  //       }
-  //     }
-  //   }
-  // }
-
+ 
   function changedToolorClass() {
     if (isDrawing) {
       setDrawing(false);
@@ -157,31 +158,8 @@ const ImageCanvas = forwardRef((props, ref) => {
       setDrawingObjs(drawingObjs);
     }
   }
-  const refBorder = useRef(null);
-  const [coords, setCoords] = useState({ x: 0, y: 0 }); //current cursor position(relative to image)
-  const [circleCursor, setCircleCursor] = useState(
-    document.createElementNS("http://www.w3.org/2000/svg", "circle")
-  );
-  const [lineCursor, setLineCursor] = useState(
-    document.createElementNS("http://www.w3.org/2000/svg", "line")
-  );
 
-  const [isPanning, setPanning] = useState(false);
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale:1 });
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 }); //마우스 클릭이 되었을 때 당시의 위치
-  const [isDrawing, setDrawing] = useState(false); //IsDrawing
-  const [drawingObjs, setDrawingObjs] = useState([]);
-  const [currentCursor, setCurrentCursor] = useState("defualt");
-  //const [labels, setLabels] = useState([]); 
-
-  useEffect(()=> {
-    console.log("setTransform",transform);
-    applyTransform();
-  },[transform])
-
-  useEffect(() => {
-    console.log("useEffect");
-  }, [drawingObjs]);
+ 
 
   function zoomIn() {
     setTransform({ ...transform, scale: transform.scale * 1.1 });
@@ -210,8 +188,7 @@ const ImageCanvas = forwardRef((props, ref) => {
     });
   }
 
-  function zoomFit() {
-    //props.imgRef.current.style.transform = null;
+  function zoomFit() { 
     reset();
   }
 
@@ -219,14 +196,11 @@ const ImageCanvas = forwardRef((props, ref) => {
     if (props.imgW != null) {
       let _w = props.imgW;
       let _h = props.imgH;
-
-      //var maxSize = props.imgW > props.imgH ? props.imgW : props.imgH;
-      //let maxSize = _w > _h ? _w : _h;
+ 
       var style =
         props.imgRef.current.currentStyle ||
-        window.getComputedStyle(props.imgRef.current, false);
-      //props.imgRef
-      // refBorder
+        window.getComputedStyle(props.imgRef.current, false); 
+
       var w = parseInt(style.width.replace("px", ""));
       var h = parseInt(style.height.replace("px", ""));
       let wRatio = w / _w;
@@ -234,7 +208,7 @@ const ImageCanvas = forwardRef((props, ref) => {
       var minRatio = Math.min(wRatio, hRatio);
       var maxRatio = Math.max(wRatio, hRatio);
 
-      console.log("style", w, h, wRatio, hRatio);
+      //console.log("style", w, h, wRatio, hRatio);
       return minRatio; //minDstSize / maxSize;
     } else {
       return 1.0;
@@ -248,24 +222,20 @@ const ImageCanvas = forwardRef((props, ref) => {
         props.imgRef.current.currentStyle ||
         window.getComputedStyle(props.imgRef.current, false);
       var w = parseInt(style.width.replace("px", ""));
-
       var offset = w - realW;
-
-      console.log("defaultPointX", props.imgW, _scale, realW, w);
+ 
       return offset / 2;
     } else {
       return 0;
     }
   }
   function defaultPointY(_scale) {
-    console.log("defaultPointY");
     if (props.imgW != null) {
       var realH = props.imgH * _scale;
       var style =
         props.imgRef.current.currentStyle ||
         window.getComputedStyle(props.imgRef.current, false);
       var h = parseInt(style.height.replace("px", ""));
-
       var offset = h - realH;
 
       return offset / 2;
@@ -278,8 +248,6 @@ const ImageCanvas = forwardRef((props, ref) => {
     setPanning(false);
     if (props.svgRef.current.contains(circleCursor)) {
       props.svgRef.current.removeChild(circleCursor);
-    } else {
-      //console.log(circleCursor);
     }
   }
 
@@ -296,14 +264,14 @@ const ImageCanvas = forwardRef((props, ref) => {
   function drawingDone() {
     if (props.toolIdx == 3 /*polyline*/) {
       console.log("polyline complete");
-      stopPolyline(coords.x, coords.y);
+      stopPolyline(coord.x, coord.y);
       circleCursor.style.strokeWidth = 1 / transform.scale;
       circleCursor.style.stroke = props.selectedClass.classColor;
       setCircleCursor(circleCursor);
 
       //end polyline
       let b = new Blob(
-        props.labels.length,
+        props.maskObjs.length,
         props.selectedClass.index,
         props.selectedClass.classColor,
         "polyline",
@@ -311,7 +279,7 @@ const ImageCanvas = forwardRef((props, ref) => {
         null,
         drawingObjs[drawingObjs.length - 1]
       );
-      props.labels.push(b);
+      props.maskObjs.push(b);
     } else if (props.toolIdx == 4 /*polygon*/) {
       console.log("polygon complete");
       var pt = drawingObjs[drawingObjs.length - 1].points[0];
@@ -322,10 +290,9 @@ const ImageCanvas = forwardRef((props, ref) => {
       circleCursor.style.stroke = props.selectedClass.classColor;
       drawingObjs[drawingObjs.length - 1].style.strokeWidth = 1;
       setCircleCursor(circleCursor);
-
-      console.log("클래스인덱스", props.selectedClass);
+ 
       let b = new Blob(
-        props.labels.length,
+        props.maskObjs.length,
         props.selectedClass.index,
         props.selectedClass.classColor,
         "polygon",
@@ -333,8 +300,8 @@ const ImageCanvas = forwardRef((props, ref) => {
         null,
         drawingObjs[drawingObjs.length - 1]
       );
-      props.labels.push(b);
-      console.log(props.labels);
+      props.maskObjs.push(b);
+      console.log(props.maskObjs);
     }
   }
 
@@ -371,9 +338,7 @@ const ImageCanvas = forwardRef((props, ref) => {
   }
 
   function getRealDist(pt, pt2) {
-    var dist = Math.sqrt(Math.pow(pt.x - pt2.x, 2) + Math.pow(pt.y - pt2.y, 2));
-    //var result = dist / scale;
-    //console.log("getRealDis",dist,scale,result);
+    var dist = Math.sqrt(Math.pow(pt.x - pt2.x, 2) + Math.pow(pt.y - pt2.y, 2)); 
     return dist;
   }
 
@@ -409,7 +374,7 @@ const ImageCanvas = forwardRef((props, ref) => {
         else {
           var len = drawingObjs[drawingObjs.length - 1].points.length;
           var pt = drawingObjs[drawingObjs.length - 1].points[len - 1];
-          var dist = getRealDist(pt, coords);
+          var dist = getRealDist(pt, coord);
           if (dist <= 5) {
             drawingDone();
           } else {
@@ -422,7 +387,7 @@ const ImageCanvas = forwardRef((props, ref) => {
           startPolyline({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
         else {
           var pt = drawingObjs[drawingObjs.length - 1].points[0];
-          var dist = getRealDist(pt, coords);
+          var dist = getRealDist(pt, coord);
           if (dist <= 5) {
             drawingDone();
           } else {
@@ -445,7 +410,7 @@ const ImageCanvas = forwardRef((props, ref) => {
 
           //end brush
           let b = new Blob(
-            props.labels.length,
+            props.maskObjs.length,
             props.selectedClass.index,
             props.selectedClass.classColor,
             "polyline",
@@ -453,8 +418,8 @@ const ImageCanvas = forwardRef((props, ref) => {
             null,
             drawingObjs[drawingObjs.length - 1]
           );
-          props.labels.push(b);
-          console.log(props.labels);
+          props.maskObjs.push(b);
+          console.log(props.maskObjs);
         }
         break;
       case 3:
@@ -468,7 +433,7 @@ const ImageCanvas = forwardRef((props, ref) => {
     }
   }
   function handleMouseMove(e) {
-    setCoords({
+    setCoord({
       x: e.nativeEvent.offsetX,
       y: e.nativeEvent.offsetY,
     });
@@ -478,10 +443,6 @@ const ImageCanvas = forwardRef((props, ref) => {
         if (!isPanning) {
           return;
         }
-        // setPoint({
-        //   x: e.clientX - panStart.x,
-        //   y: e.clientY - panStart.y,
-        // });
         setTransform({
           ...transform,
           x: e.clientX - panStart.x,
@@ -500,9 +461,7 @@ const ImageCanvas = forwardRef((props, ref) => {
       case 2:
         if (isDrawing) {
           addPoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-        }
-        circleCursor.setAttribute("cx", coords.x);
-        circleCursor.setAttribute("cy", coords.y);
+        } 
         setCircleCursor(circleCursor);
         break;
       case 3:
@@ -511,16 +470,9 @@ const ImageCanvas = forwardRef((props, ref) => {
           var len = drawingObjs[lastIdx].points.length;
           var pt = drawingObjs[lastIdx].points[len - 1];
           if (e.buttons == 1) {
-            // if (
-            //   pt.x !== e.nativeEvent.offsetX ||
-            //   pt.y !== e.nativeEvent.offsetY
-            // )
               addPoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
           }
-          // var dist = Math.sqrt(
-          //   Math.pow(pt.x - coords.x, 2) + Math.pow(pt.y - coords.y, 2)
-          // );
-          var dist = getRealDist(pt, coords);
+          var dist = getRealDist(pt, coord);
           if (dist <= 5 / transform.scale) {
             circleCursor.style.strokeWidth = 5 / transform.scale;
             circleCursor.style.stroke = "red";
@@ -528,9 +480,7 @@ const ImageCanvas = forwardRef((props, ref) => {
             circleCursor.style.strokeWidth = 1 / transform.scale;
             circleCursor.style.stroke = props.selectedClass.classColor;
           }
-        }
-        circleCursor.setAttribute("cx", coords.x);
-        circleCursor.setAttribute("cy", coords.y);
+        } 
         setCircleCursor(circleCursor);
         break;
       case 4: //polygon
@@ -539,7 +489,7 @@ const ImageCanvas = forwardRef((props, ref) => {
             addPoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
           }
           var pt = drawingObjs[drawingObjs.length - 1].points[0];
-          dist = getRealDist(pt, coords);
+          dist = getRealDist(pt, coord);
           if (dist <= 5 / transform.scale) {
             circleCursor.style.strokeWidth = 5 / transform.scale;
             circleCursor.style.stroke = "red";
@@ -549,9 +499,7 @@ const ImageCanvas = forwardRef((props, ref) => {
             circleCursor.style.stroke = props.selectedClass.classColor;
             circleCursor.setAttribute("r", 0.5);
           }
-        }
-        circleCursor.setAttribute("cx", coords.x);
-        circleCursor.setAttribute("cy", coords.y);
+        } 
         setCircleCursor(circleCursor);
         break;
     }
@@ -561,7 +509,7 @@ const ImageCanvas = forwardRef((props, ref) => {
     props.svgRef.current.removeChild(target);
     drawingObjs.splice(target, 1);
     setDrawingObjs(drawingObjs);
-    props.labels.splice(index, 1);
+    props.maskObjs.splice(index, 1);
   }
 
   function handleWheel(e) {
@@ -578,19 +526,14 @@ const ImageCanvas = forwardRef((props, ref) => {
       scale: _scale,
     });
   }
-  function handleZoomFit(e) {
-    setTransform({
-      x: defaultPointX(),
-      y: defaultPointY(),
-      scale: transform.scale,
-    });
-    console.log("handleZoomFit");
+
+  function handleZoomFit() {
     zoomFit();
   }
-  function handleZoomIn(e) {
+  function handleZoomIn() {
     zoomIn();
   }
-  function handleZoomOut(e) {
+  function handleZoomOut() {
     zoomOut();
   }
 
@@ -598,7 +541,7 @@ const ImageCanvas = forwardRef((props, ref) => {
     var val =
       "translate(" + transform.x + "px, " + transform.y + "px) scale(" + transform.scale + ")";
     props.imgRef.current.style.transform = val;
-    console.log(val);
+    //console.log(val);
   }
 
   function newPolyline(_stroke) {
@@ -612,7 +555,6 @@ const ImageCanvas = forwardRef((props, ref) => {
     poly.style.strokeLinejoin = "round";
     poly.style.strokeWidth = stroke;
     poly.style.strokeOpacity = ".5";  
-    //poly.shapeRendering = "crispEdges;";
     if (_stroke) {
       poly.style.strokeOpacity = "0.5";
       poly.style.fill = "none"; 
@@ -624,7 +566,6 @@ const ImageCanvas = forwardRef((props, ref) => {
     poly.style.stroke = props.selectedClass.classColor;
     poly.style.fillOpacity = ".3";
 
-    console.log("sef", poly.style.tagName);
     return poly;
   }
 
@@ -658,11 +599,8 @@ const ImageCanvas = forwardRef((props, ref) => {
     var points = poly.getAttribute("points");
     var val = `${_x},${_y} `;
     if (points === null) points = val;
-    else points += val;
-
-    poly.setAttributeNS(null, "points", points);
-
-    //setDrawingObjs({...drawingObjs, });
+    else points += val; 
+    poly.setAttributeNS(null, "points", points); 
   }
 
   return (
@@ -686,9 +624,9 @@ const ImageCanvas = forwardRef((props, ref) => {
       </Div>
       <BtmDiv>
         <DefaultP>
-          (x:{coords.x} y:{coords.y}) Scale : {(transform.scale * 100).toFixed(0)}%
+          (x:{coord.x} y:{coord.y}) Scale : {(transform.scale * 100).toFixed(0)}%
         </DefaultP>
-        <DefaultP>&nbsp;&nbsp;&nbsp;Labels : {props.labels.length}</DefaultP>
+        <DefaultP>&nbsp;&nbsp;&nbsp;masks : {props.maskObjs.length}</DefaultP>
         <Btn
           className="zoom zoom-plus material-icons"
           id="zoom-plus"
