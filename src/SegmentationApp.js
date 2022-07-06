@@ -7,19 +7,7 @@ import NetListFooter from './NetListFooter';
 import {
   readDatasetObjs, readImageObjs, readImageBlob, readMaskObjs, createMask,
   readSegNetObjs, readPredMaskObjs, requestSegNetTrain,
-} from './requests';
-
-// const bootstrap = require('bootstrap');
-// // Enable tooltips
-// const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-// tooltipTriggerList.forEach(tooltipTriggerEl => {
-//   new bootstrap.Tooltip(tooltipTriggerEl);
-// });
-// // Enable popovers
-// const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-// const popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-//   return new bootstrap.Popover(popoverTriggerEl, {html: true});
-// });
+} from './requests'; 
 
 function SegmentationApp() {
   // ------------- States for holding the whole data received from the backend ------------------
@@ -50,15 +38,7 @@ function SegmentationApp() {
         nonreviewed: [ { id: <int>, dataset_id: <int>, gt_label: <int|null>, gt_mask: <int|null> } ],
       }
     }
-   */
-  const [predMaskListsNestedObj, setPredMaskListsNestedObj] = useState({});
-  /*
-    {
-      (segNetId) <int>: {
-        (imageId) <int>: { id: <int>, image_id: <int>, segnet_id: <int>, scores: <object|null>, mask: <object|null> }
-      }
-    }
-   */
+   */ 
 
   // ------------------ States for HTML elements that depend on the data above -----------------
   const [datasetItems, setDatasetItems] = useState([]);   // [ <HTML element> ]
@@ -69,17 +49,16 @@ function SegmentationApp() {
   // ------------------ States for tracking the currently selected objects ---------------------
   const [selectedDatasetId, setSelectedDatasetId] = useState(1);    // int (default dataset id: 1)
   const [selectedImageInfoObj, setSelectedImageInfoObj] = useState(
-    { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: {}, segNetId: 0, predMask: {} }
+    { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: [], segNetId: 0, predMask: [] }
   );
   /*
-    {
-      imageset: <string>, imageId: <int>, imageFilename: <string>, imageBlob: <Blob>, mask: <object>,
-      segNetId: <int>, predMask: <object>
+    
+      imageset: <string>, imageId: <int>, imageFilename: <string>, imageBlob: <Blob>, mask: <array>,
+      segNetId: <int>, predMask: <array>
     }
   */
   const [ongoingTrainJobExists, setOngoingTrainJobExists] = useState({});    // { (dataset_id) <int>: <bool> }
-
-
+ 
   const readAndSetDatasetObjs = async () => {
     const datasetObjsList = await readDatasetObjs();
     const tempDatasetObjs = {};
@@ -151,8 +130,9 @@ function SegmentationApp() {
   };
 
   const createAndSetMask = async (datasetId, datasetName, domainName, imageFilename, mask) => {
-    const _maskObj = await createMask(datasetName, domainName, imageFilename, mask);
-    setSelectedImageInfoObj({ ...selectedImageInfoObj, mask: _maskObj.mask });
+    const maskObj = await createMask(datasetName, domainName, imageFilename, mask);
+    const maskData = maskObj.mask.blobs;
+    setSelectedImageInfoObj({ ...selectedImageInfoObj, mask: maskData });
 
     // Flag the image as 'reviewed'
     flagImageObjAsReviewInImageListsNestedObj(datasetId, imageFilename);
@@ -162,14 +142,17 @@ function SegmentationApp() {
     const imageBlob = await readImageBlob(imageId);
     const maskObjs = await readMaskObjs(imageId);
 
-    let maskData = {};
+    let maskData = [];
     if (maskObjs.length > 0)
-      maskData = maskObjs[maskObjs.length-1].mask;
+      maskData = maskObjs[maskObjs.length-1].mask.blobs;    // FIXME maybe: load the latest mask
 
-    let predMaskData = {};
+    let predMaskData = [];
     const selectedSegNetId = selectedImageInfoObj.segNetId;
-    if ((selectedSegNetId > 0) && (imageId in predMaskListsNestedObj[selectedSegNetId])) {
-      predMaskData = predMaskListsNestedObj[selectedSegNetId][imageId].mask;
+    if (selectedSegNetId > 0) {
+      const predMaskObjs = await readPredMaskObjs(selectedSegNetId, imageId);
+      if (predMaskObjs.length > 0) {
+        predMaskData = predMaskObjs[0].mask.blobs;    // always be one element at maximum
+      }
     }
 
     setSelectedImageInfoObj({
@@ -181,73 +164,25 @@ function SegmentationApp() {
 
   const clearSelectedImageInfoObj = () => {
     setSelectedImageInfoObj(
-      { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: {}, segNetId: 0, predMask: {} }
+      { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: [], segNetId: 0, predMask: [] }
     );
   };
 
   const handleSegNetItemOnClick = async (segNetId) => {
     const selectedImageId = selectedImageInfoObj.imageId;
 
-    if (!(segNetId in predMaskListsNestedObj) ||
-        Object.keys(predMaskListsNestedObj[segNetId]).length === 0) {
-      // Fetch and add a new predMask list object for given segNetId
-      const predMaskObjs = await readPredMaskObjs(segNetId);
-      const tempPredMaskListObj = {};
-      for (let predMaskObj of predMaskObjs) {
-        const imageId = predMaskObj['image_id'];
-        tempPredMaskListObj[imageId] = predMaskObj;
-      }
-
-      // Change the mask data if an image is selected now
-      if (selectedImageId > 0) {
-        // only if there is any predMask data
-        if (selectedImageId in tempPredMaskListObj) {
-          setSelectedImageInfoObj({
-            ...selectedImageInfoObj,
-            predMask: tempPredMaskListObj[selectedImageId].mask,
-            segNetId: segNetId,
-          });
-        } else {
-          setSelectedImageInfoObj({
-            ...selectedImageInfoObj,
-            predMask: {},
-            segNetId: segNetId,
-          });
-        }
-      } else {
-        setSelectedImageInfoObj({
-          ...selectedImageInfoObj,
-          segNetId: segNetId,
-        })
-      }
-
-      setPredMaskListsNestedObj( {
-        ...predMaskListsNestedObj, [segNetId]: tempPredMaskListObj,
-      });
-    } else {
-      // Change the mask data if an image is selected now
-      if (selectedImageId > 0) {
-        // only if there is any predMask data
-        if (selectedImageId in predMaskListsNestedObj[segNetId]) {
-          setSelectedImageInfoObj({
-            ...selectedImageInfoObj,
-            predMask: predMaskListsNestedObj[segNetId][selectedImageId].mask,
-            segNetId: segNetId,
-          });
-        } else {
-          setSelectedImageInfoObj({
-            ...selectedImageInfoObj,
-            predMask: {},
-            segNetId: segNetId,
-          });
-        }
-      } else {
-        setSelectedImageInfoObj({
-          ...selectedImageInfoObj,
-          segNetId: segNetId,
-        })
+    let predMaskData = [];
+    if (selectedImageId > 0) {
+      const predMaskObjs = await readPredMaskObjs(segNetId, selectedImageId);
+      if (predMaskObjs.length > 0) {
+        predMaskData = predMaskObjs[0].mask.blobs;    // always be one element at maximum
       }
     }
+    setSelectedImageInfoObj({
+      ...selectedImageInfoObj,
+      segNetId: segNetId,
+      predMask: predMaskData,
+    })
   };
 
   const requestSegNetTrainOnSelectedDataset = async () => {
@@ -327,8 +262,7 @@ function SegmentationApp() {
         setImageItems(tempImageItems);
       }
     }
-  }, [datasetObjs, selectedDatasetId, imageListsNestedObj, selectedImageInfoObj,
-           predMaskListsNestedObj]);
+  }, [datasetObjs, selectedDatasetId, imageListsNestedObj, selectedImageInfoObj]);
 
   useEffect(() => {
     if (Object.keys(datasetObjs).length > 0) {

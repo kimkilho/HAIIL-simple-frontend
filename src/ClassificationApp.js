@@ -3,7 +3,7 @@ import './App.css';
 import Header from './Header';
 import ImageList from './ImageList';
 import ImageLabelReviewScreen from './ImageLabelReviewScreen';
-import ModelListFooter from './ModelListFooter';
+import NetListFooter from './NetListFooter';
 import {
   readDatasetObjs, readImageObjs, readImageBlob, readLabelObjs, createLabel,
 } from './requests';
@@ -156,7 +156,7 @@ function ClassificationApp() {
         </div>
       </div>
 
-      <ModelListFooter
+      <NetListFooter
       />
     </main>
 
