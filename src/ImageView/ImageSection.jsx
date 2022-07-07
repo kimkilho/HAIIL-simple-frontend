@@ -145,16 +145,14 @@ const ImageSection = forwardRef((props, ref) => {
     canvasRef.current.applyStrokeThreshold();
   }, [strokethickness, threshold]);
  
-  function applyExistingMasks() {
-    var tempMaskObjs = [];
+  function applyExistingMasks() { 
     if (props.maskObjs != undefined) { 
       for(let mask of props.maskObjs)
       {
         var obj = mask.convertSVG();
         canvasRef.current.addObj(obj);
       }
-    }
-    props.setMaskObjs(tempMaskObjs);
+    } 
   }
 
   return (

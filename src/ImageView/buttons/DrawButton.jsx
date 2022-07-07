@@ -9,8 +9,7 @@ const Div = styled.div`
   width: 35px;
   height: 35px;
   border-radius: 2px;
-  border: 1px solid #313c4e;
-  color: #444;
+  border: 1px solid #313c4e; 
   background-color: #2b3648;
   cursor: pointer; 
   transition: background-color 0.4s; 
@@ -18,7 +17,7 @@ const Div = styled.div`
   justify-content: center;
   align-items:center;
   &:hover {
-    border-color: #1976d2;
+    border: 1.5px solid #1976d2; 
     color: #bbb;
   }
 `;

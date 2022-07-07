@@ -10,8 +10,7 @@ const Div = styled.div`
   cursor: pointer;
   transition: 0.3s;
   color: #eee;
-  font-size: 14px;
-  background-color: red;
+  font-size: 14px; 
   border: 2px solid transparent;
   &:hover {
     border: 2px solid rgb(0, 153, 255);

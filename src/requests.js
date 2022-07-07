@@ -1,5 +1,7 @@
-const sendGETRequestAndGetJsonResponseData = async (url) => {
-  const response = await fetch(url, { method: 'GET' });
+const sendGETRequestAndGetJsonResponseData = async (url, caching = true) => {
+  const headers = { method: 'GET' };
+  if (caching === false) headers.cache = 'no-store';
+  const response = await fetch(url, headers);
 
   if (response.status === 200) {
     return await response.json();
@@ -26,10 +28,16 @@ const readSegNetObjs = async (datasetId) => {
   );
 };
 
-const readPredMaskObjs = async (segNetId) => {
-  return await sendGETRequestAndGetJsonResponseData(
-    `/api/segnets/${segNetId}/predmasks/`, 'GET',
-  );
+const readPredMaskObjs = async (segNetId, imageId = null) => {
+  if (imageId !== null) {
+    return await sendGETRequestAndGetJsonResponseData(
+      `/api/segnets/${segNetId}/images/${imageId}/predmasks/`, 'GET',
+    );
+  } else {
+    return await sendGETRequestAndGetJsonResponseData(
+      `/api/segnets/${segNetId}/predmasks/`, 'GET',
+    );
+  }
 };
 
 const readImageObjs = async (datasetId, task = 'classification', reviewed = false) => {
@@ -47,7 +55,10 @@ const readImageObjs = async (datasetId, task = 'classification', reviewed = fals
 const readImageBlob = async (imageId) => {
   const response = await fetch(
     `/api/images/${imageId}/file`,
-    { method: 'GET' },
+    {
+      method: 'GET',
+      cache: 'default',    // NOTE: May have to be set to 'no-store' to prevent the browser from caching
+    },
   );
 
   if (response.status === 200) {
@@ -98,7 +109,7 @@ const createMask = async (datasetName, domainName, imageFilename, mask) => {
   const data = {
     dataset_name: datasetName, domain_name: domainName, image_filename: imageFilename,
     mask: mask, masked_at: maskedAt,
-  }; 
+  };
 
   const response = await fetch(
     '/api/masks',

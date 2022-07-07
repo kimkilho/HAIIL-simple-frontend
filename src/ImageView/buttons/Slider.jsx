@@ -5,7 +5,7 @@ const Input = styled.input`
   width: 150px;
   max-width: 150px;
   border: 1px solid red;
-  display: block;
+  display: block; 
 `;
   
 function Slider({ min, max, defaultVal, setValue }) {

@@ -58,7 +58,8 @@ function SegmentationApp() {
     }
   */
   const [ongoingTrainJobExists, setOngoingTrainJobExists] = useState({});    // { (dataset_id) <int>: <bool> }
- 
+  const [segNetTrainConfig, setSegNetTrainConfig] = useState({ numEpochs: 10 });    // TODO: Add more hyperparameters
+
   const readAndSetDatasetObjs = async () => {
     const datasetObjsList = await readDatasetObjs();
     const tempDatasetObjs = {};
@@ -185,9 +186,23 @@ function SegmentationApp() {
     })
   };
 
+  const handleSegNetTrainConfigChange = (event) => {
+    const target = event.target;
+    setSegNetTrainConfig({
+      ...segNetTrainConfig,
+      [target.name]: target.value,
+    })
+  };
+
+  const handleSegNetTrainConfigSubmit = (event) => {
+    console.log('handleSegNetTrainConfigSubmit called', segNetTrainConfig);
+    event.preventDefault();
+  }
+
   const requestSegNetTrainOnSelectedDataset = async () => {
     const { name: datasetName, domain: domainName } = datasetObjs[selectedDatasetId];
-    const responseData = await requestSegNetTrain(datasetName, domainName, 'mask', 5) // FIXME later: Expose hyperparameters
+    const { numEpochs } = segNetTrainConfig;
+    const responseData = await requestSegNetTrain(datasetName, domainName, 'mask', numEpochs);
     // const { job_id: jobId, job_status: jobStatus } = responseData;
 
     // Call readAndSetSegNetObjs function to start interval, if there is no ongoing training job
@@ -311,7 +326,7 @@ function SegmentationApp() {
   }
 
   return (
-    <main>
+    <main className="d-flex flex-column h-100">
       <Header
         datasetItems={datasetItems}
         selectedDatasetItemName={selectedDatasetObj === null ?
@@ -341,9 +356,11 @@ function SegmentationApp() {
       <NetListFooter
         segNetItems={segNetItems}
         requestSegNetTrainOnSelectedDataset={requestSegNetTrainOnSelectedDataset}
+        segNetTrainConfig={segNetTrainConfig}
+        handleSegNetTrainConfigChange={handleSegNetTrainConfigChange}
+        handleSegNetTrainConfigSubmit={handleSegNetTrainConfigSubmit}
       />
-    </main>
-
+    </main> 
   );
 }
 
