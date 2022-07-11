@@ -67,11 +67,12 @@ const DefaultP = styled.p`
 
 const ImageCanvas = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => ({
-    changedToolorClass,
+    changedToolforClass,
     applyStrokeThreshold,
     addObj,
     clearCanvas,
     zoomFit,
+    updateVisible,
   }));
 
   const refBorder = useRef(null);
@@ -87,6 +88,7 @@ const ImageCanvas = forwardRef((props, ref) => {
   const [panStart, setPanStart] = useState({ x: 0, y: 0 }); // position when the mouse clicked for panning.
   const [isDrawing, setDrawing] = useState(false); //IsDrawing
   const [drawingObjs, setDrawingObjs] = useState([]);
+  const [backupObjs, setBackupobjs] = useState([]); 
   const [currentCursor, setCurrentCursor] = useState("defualt"); 
 
   useEffect(()=> {
@@ -114,7 +116,7 @@ const ImageCanvas = forwardRef((props, ref) => {
     setDrawingObjs(drawingObjs);
   }
  
-  function changedToolorClass() {
+  function changedToolforClass() {
     if (isDrawing) {
       setDrawing(false);
       if(props.svgRef.current.lastChild !== null)
@@ -158,6 +160,28 @@ const ImageCanvas = forwardRef((props, ref) => {
     }
   }
 
+  function updateVisible() { 
+    if(!props.isVisiblePseudo)
+    {
+      // drawingObjs.forEach((e, index) => {
+      //   console.log(props.maskObjs[index]);
+      //   if (props.maskObjs[index].type === "predict") {
+      //     backupObjs.push(e);
+      //     console.log("remove check",backupObjs);
+      //     removeObj(e, index);
+      //   }
+      // });
+    }
+    else
+    {
+      // console.log("add check",backupObjs);
+      // backupObjs.forEach(e => {
+      //   addObj(e);
+      // });
+      // backupObjs.splice(0,backupObjs.length);
+    } 
+  }
+  
  
 
   function zoomIn() {
@@ -510,6 +534,7 @@ const ImageCanvas = forwardRef((props, ref) => {
     setDrawingObjs(drawingObjs);
     props.maskObjs.splice(index, 1);
   }
+   
 
   function handleWheel(e) {
     var xs = (e.clientX - transform.x) / transform.scale,

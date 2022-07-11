@@ -74,6 +74,11 @@ const Btn = styled.div`
   margin: 4px;
 `;
 
+const TempDiv = styled.div`
+  justify-content: flex-end;
+  //width: 100%;
+`;
+
 
 const ImageSection = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => ({
@@ -91,6 +96,7 @@ const ImageSection = forwardRef((props, ref) => {
   const [classIdx, setClassIdx] = useState(0);
   const [strokethickness, setStrokeThickness] = useState(5);
   const [threshold, setThreshold] = useState(100);
+  const [isvisiblePseudoMask, setIsvisiblePseudoMask] = useState(false);
 
   var classes = [
     new ImgClass(1, "", "#DB7093"),
@@ -133,12 +139,17 @@ const ImageSection = forwardRef((props, ref) => {
   ];
 
   useEffect(() => {
+    console.log("isvisiblePseudoMask", isvisiblePseudoMask);
+    canvasRef.current.updateVisible();
+  }, [isvisiblePseudoMask]);
+
+  useEffect(() => {
     setToolIdx(0);
     setClassIdx(0);
   }, []);
 
   useEffect(() => {
-    canvasRef.current.changedToolorClass();
+    canvasRef.current.changedToolforClass();
   }, [toolIdx, classIdx]);
 
   useEffect(() => {
@@ -155,13 +166,17 @@ const ImageSection = forwardRef((props, ref) => {
     } 
   }
 
+  const handlePseudoOnChange = (e) => {
+    if (e.target !== null) {
+      setIsvisiblePseudoMask(e.target.checked);
+    }
+  };
+
   return (
     <Main className="imageSection">
       <Inner className="inner">
         <ImageControl className="image-control">
-          <DefaultP>
-            &nbsp;&nbsp;Thickness&nbsp;:
-          </DefaultP>
+          <DefaultP>&nbsp;&nbsp;Thickness&nbsp;:</DefaultP>
           <Slider
             min="1"
             max="100"
@@ -192,7 +207,7 @@ const ImageSection = forwardRef((props, ref) => {
               ></DrawButton>
             </React.Fragment>
           ))}
-          <DefaultP>&nbsp;&nbsp;AI-Assisted&nbsp;Tools&nbsp;&nbsp;</DefaultP>
+          <DefaultP>&nbsp;&nbsp;AI-Assisted&nbsp;Tools&nbsp;&nbsp;</DefaultP> 
           {drawAssistTools.map((value, i) => (
             <React.Fragment key={i}>
               <DrawButton
@@ -202,7 +217,19 @@ const ImageSection = forwardRef((props, ref) => {
                 click={setToolIdx.bind(this)}
               ></DrawButton>
             </React.Fragment>
-          ))}
+          ))}   
+          <div className="form-check form-switch d-flex align-items-center">
+            <input
+              className="form-check-input shadow-none"
+              type="checkbox"
+              role="switch"
+              id="flexSwitchCheckDefault"
+              onChange={handlePseudoOnChange.bind(this)}
+            />
+            <label className="form-check-label d-flex align-items-center mt-1 mx-1" style={{color:"#afbdd1", fontSize:"14px"}} htmlFor="flexSwitchCheckDefault">
+              Pseudo mask
+            </label>
+          </div>  
         </DrawMenu>
         <ClassSection>
           <Pver>&nbsp;&nbsp;Classes&nbsp;&nbsp;</Pver>
@@ -228,6 +255,7 @@ const ImageSection = forwardRef((props, ref) => {
           selectedClass={classes.at(classIdx)}
           maskObjs={props.maskObjs}
           ref={canvasRef}
+          isVisiblePseudo={isvisiblePseudoMask}
         ></ImageCanvas>
       </Inner>
     </Main>

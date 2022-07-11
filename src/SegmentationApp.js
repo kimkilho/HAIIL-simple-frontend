@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import Header from './Header';
 import ImageList from './ImageList';
@@ -45,13 +45,14 @@ function SegmentationApp() {
   // ------------------ States for HTML elements that depend on the data above -----------------
   const [datasetItems, setDatasetItems] = useState([]);   // [ <HTML element> ]
   const [imageItems, setImageItems] = useState({ reviewed: [], nonreviewed: [] });
+  const [orderOption, setOrderOption] = useState({ reviewed: 0, nonreviewed: 0 }); //order option
     // { reviewed: [ <HTML element> ], nonreviewed: [ <HTML element> ] }
   const [segNetItems, setSegNetItems] = useState([]);   // [ <HTML element> ]
 
   // ------------------ States for tracking the currently selected objects ---------------------
   const [selectedDatasetId, setSelectedDatasetId] = useState(1);    // int (default dataset id: 1)
   const [selectedImageInfoObj, setSelectedImageInfoObj] = useState(
-    { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: [], segNetId: 0, pseudoMask: [] }
+    { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: [], segNetId: 0, pseudoMask: []}
   );
   /*
     {
@@ -185,13 +186,13 @@ function SegmentationApp() {
     setSelectedImageInfoObj({
       ...selectedImageInfoObj,
       imageset: imageset, imageId: imageId, imageFilename: imageFilename, imageBlob: imageBlob,
-      mask: maskData, pseudoMask: pseudoMaskData,
+      mask: maskData, pseudoMask: pseudoMaskData
     });
   }
 
   const clearSelectedImageInfoObj = () => {
     setSelectedImageInfoObj(
-      { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: [], segNetId: 0, pseudoMask: [] }
+      { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: [], segNetId: 0, pseudoMask: []}
     );
   };
 
@@ -287,23 +288,50 @@ function SegmentationApp() {
       if (imageListsNestedObj[datasetId] === undefined) {
         readAndSetImageListsNestedObj(datasetId);
       } else {
-        const tempImageItems = { reviewed: [], nonreviewed: [] };
+
+        //1. make array for order
+        const sortImageItems = { reviewed: [], nonreviewed: [] };
         ['nonreviewed', 'reviewed'].forEach((imageset) => {
           imageListsNestedObj[datasetId][imageset].forEach((imageObj, i) => {
+          var tempItem = { id : imageObj.id, 
+            name : imageObj.name,
+            samplingScore : -1.000,
+          }  
+           if (imageObj.id in imageSamplingScoresFromSelectedSegNetObj &&
+               selectedSamplingScoreMetric in imageSamplingScoresFromSelectedSegNetObj[imageObj.id]) { 
+                tempItem.samplingScore = imageSamplingScoresFromSelectedSegNetObj[imageObj.id][selectedSamplingScoreMetric].toFixed(3);
+           }
+           sortImageItems[imageset].push(tempItem);
+           });
+        });
+
+        //2. sort by order
+        ['nonreviewed', 'reviewed'].forEach((imageset) => {
+          switch(orderOption[imageset])
+          {
+            case 0:
+              sortImageItems[imageset].sort((a,b) => parseFloat(b.samplingScore) - parseFloat(a.samplingScore));  
+              break;
+            case 1:
+              sortImageItems[imageset].sort((a,b) => parseFloat(a.samplingScore) - parseFloat(b.samplingScore));  
+              break; 
+          } 
+        });  
+
+        //3. make imageset list 
+        const tempImageItems = { reviewed: [], nonreviewed: [] }; 
+        ['nonreviewed', 'reviewed'].forEach((imageset) => {
+            sortImageItems[imageset].forEach((imageObj, i) => {
             const imageId = imageObj.id;
             const imageFilename = imageObj.name;
-            let samplingScore = -1.000;
-            if (imageId in imageSamplingScoresFromSelectedSegNetObj &&
-                selectedSamplingScoreMetric in imageSamplingScoresFromSelectedSegNetObj[imageId]) {
-              samplingScore = imageSamplingScoresFromSelectedSegNetObj[imageId][selectedSamplingScoreMetric].toFixed(3);
-            }
+            let samplingScore = imageObj.samplingScore; 
             let activeFlag;
             if (selectedImageInfoObj.imageId === imageId)
               activeFlag = ' active';
             else
               activeFlag = '';
             const imageItem =
-              <a key={imageId} href="#" onClick={() => handleImageItemOnClick(imageset, imageId, imageFilename)}
+              <a key={imageId} href="#" onClick={() => handleImageItemOnClick(imageset, imageId, imageFilename, i)}
                  className={'list-group-item list-group-item-action py-1 lh-sm' + activeFlag}
                  aria-current="true"
               >
@@ -318,7 +346,8 @@ function SegmentationApp() {
         setImageItems(tempImageItems);
       }
     }
-  }, [datasetObjs, selectedDatasetId, imageListsNestedObj, selectedImageInfoObj, selectedSamplingScoreMetric]);
+
+  }, [datasetObjs, selectedDatasetId, imageListsNestedObj, selectedImageInfoObj, selectedSamplingScoreMetric, orderOption]);
 
   useEffect(() => {
     if (Object.keys(datasetObjs).length > 0) {
@@ -373,37 +402,53 @@ function SegmentationApp() {
       imageSamplingScoresFromSelectedSegNetObj[selectedImageInfoObj.imageId][selectedSamplingScoreMetric].toFixed(3);
   }
 
-  const sortOptionOnChange = (optionIdx) => {
-    console.log("sortOptionOnChange", optionIdx);
+  const sortOptionOnChange = (optionIdx, title) => {
+    if (title.includes("Non")) {
+      setOrderOption({...orderOption, nonreviewed: optionIdx}); 
+      //console.log("non-reviewed", optionIdx, title);
+    } else {
+      setOrderOption({...orderOption, reviewed: optionIdx}); 
+      //console.log("reviewed", optionIdx, title);
+    }
   };
- 
+
+  function handleKeyDown(e) {
+    if (e.key == "ArrowUp") {
+    } else if (e.key === "ArrowDown") {
+    }
+  }
+
   return (
-    <main className="d-flex flex-column h-100">
+    <main className="d-flex flex-column h-100" onKeyDown={handleKeyDown.bind(this)}>
       <Header
         datasetItems={datasetItems}
-        selectedDatasetItemName={selectedDatasetObj === null ?
-                                  'Datasets' :
-                                  selectedDatasetObj.name + ' - ' + selectedDatasetObj.domain}
-                                  samplingScoreMetricItems={samplingScoreMetricItems}
-                                  selectedSamplingScoreMetricItemName={selectedSamplingScoreMetric}
+        selectedDatasetItemName={
+          selectedDatasetObj === null
+            ? "Datasets"
+            : selectedDatasetObj.name + " - " + selectedDatasetObj.domain
+        }
+        samplingScoreMetricItems={samplingScoreMetricItems}
+        selectedSamplingScoreMetricItemName={selectedSamplingScoreMetric}
       />
       <div className="container">
         <div className="d-flex flex-nowrap">
           <ImageList
-            title='Non-reviewed Images'
+            title="Non-reviewed Images"
             imageItems={imageItems.nonreviewed}
             sortOptionChanged={sortOptionOnChange.bind(this)}
-          /> 
+          />
           <ImageMaskReviewScreen
             selectedDatasetObj={selectedDatasetObj}
             selectedImageInfoObj={selectedImageInfoObj}
-            selectedImageSamplingScoresFromSelectedSegNetObj={selectedImageSamplingScoresFromSelectedSegNetObj}
+            selectedImageSamplingScoresFromSelectedSegNetObj={
+              selectedImageSamplingScoresFromSelectedSegNetObj
+            }
             imageSamplingScoresFromSelectedSegNetObj
             createAndSetMask={createAndSetMask}
           />
 
           <ImageList
-            title='Reviewed Images'
+            title="Reviewed Images"
             imageItems={imageItems.reviewed}
             sortOptionChanged={sortOptionOnChange.bind(this)}
           />
@@ -412,7 +457,9 @@ function SegmentationApp() {
 
       <NetListFooter
         segNetItems={segNetItems}
-        requestSegNetTrainOnSelectedDataset={requestSegNetTrainOnSelectedDataset}
+        requestSegNetTrainOnSelectedDataset={
+          requestSegNetTrainOnSelectedDataset
+        }
         segNetTrainConfig={segNetTrainConfig}
         handleSegNetTrainConfigChange={handleSegNetTrainConfigChange}
         handleSegNetTrainConfigSubmit={handleSegNetTrainConfigSubmit}

@@ -96,7 +96,7 @@ function ImageMaskReviewScreen(props) {
   }, [props.selectedImageInfoObj.imageId, props.selectedImageInfoObj.segNetId]);
 
   return (
-    <MainDiv className="col-sm-6 px-md-4 align-items-center">
+    <MainDiv className="col-sm-7 px-md-4 align-items-center">
       <div className="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 className="h4">Review Screen</h1>
       </div>
