@@ -40,7 +40,7 @@ export default class DrawButton extends React.Component {
       icon: props.icon,
       checkedIdx: props.CheckedIdx,
     }; 
-    console.log(this.state.checkedIdx, this.state.idx);
+    //console.log(this.state.checkedIdx, this.state.idx);
   }
 
   render() {

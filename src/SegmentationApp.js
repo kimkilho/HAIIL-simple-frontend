@@ -319,11 +319,16 @@ function SegmentationApp() {
            selectedImageInfoObj.segNetId, selectedImageInfoObj.imageId]);
 
   let selectedDatasetObj;
-  if (Object.keys(datasetObjs).length > 0 && selectedDatasetId > 0) {
+  if (Object.keys(datasetObjs).length > 0 && selectedDatasetId > 0) { 
     selectedDatasetObj = datasetObjs[selectedDatasetId];
   } else {
-    selectedDatasetObj = null;
+    selectedDatasetObj = null; 
   }
+
+  const sortOptionOnChange = (optionIdx) => {
+    console.log("sortOptionOnChange", optionIdx);
+  };
+
 
   return (
     <main className="d-flex flex-column h-100">
@@ -338,8 +343,8 @@ function SegmentationApp() {
           <ImageList
             title='Non-reviewed Images'
             imageItems={imageItems.nonreviewed}
-          />
-
+            sortOptionChanged={sortOptionOnChange.bind(this)}
+          /> 
           <ImageMaskReviewScreen
             selectedDatasetObj={selectedDatasetObj}
             selectedImageInfoObj={selectedImageInfoObj}
@@ -349,6 +354,7 @@ function SegmentationApp() {
           <ImageList
             title='Reviewed Images'
             imageItems={imageItems.reviewed}
+            sortOptionChanged={sortOptionOnChange.bind(this)}
           />
         </div>
       </div>
