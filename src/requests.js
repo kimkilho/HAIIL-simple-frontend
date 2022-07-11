@@ -28,6 +28,13 @@ const readSegNetObjs = async (datasetId) => {
   );
 };
 
+const readSegNetPredObjs = async (segNetId, samplingScoresOnly = true) => {
+  const requestUrlQuery = `samplingscoresonly=${samplingScoresOnly ? 'true' : 'false'}`
+  return await sendGETRequestAndGetJsonResponseData(
+    `/api/segnets/${segNetId}/segnetpreds?${requestUrlQuery}`, 'GET',
+  );
+};
+
 const readSegNetPredObjsOnImage = async (segNetId, imageId) => {
   return await sendGETRequestAndGetJsonResponseData(
     `/api/segnets/${segNetId}/images/${imageId}/segnetpreds/`, 'GET',
@@ -142,5 +149,6 @@ const requestSegNetTrain = async (datasetName, domainName, predOutputType = 'mas
 };
 
 export { readDatasetObjs, readDatasetObj, readImageObjs, readImageBlob,
-         readLabelObjs, readMaskObjs, createLabel, createMask,
-         readSegNetObjs, readSegNetPredObjsOnImage, requestSegNetTrain, };
+  readLabelObjs, readMaskObjs, createLabel, createMask,
+  readSegNetObjs, readSegNetPredObjs, readSegNetPredObjsOnImage,
+  requestSegNetTrain, };

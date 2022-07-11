@@ -6,8 +6,10 @@ import ImageMaskReviewScreen from './ImageMaskReviewScreen';
 import NetListFooter from './NetListFooter';
 import {
   readDatasetObjs, readImageObjs, readImageBlob, readMaskObjs, createMask,
-  readSegNetObjs, readSegNetPredObjsOnImage, requestSegNetTrain,
+  readSegNetObjs, readSegNetPredObjs, readSegNetPredObjsOnImage, requestSegNetTrain,
 } from './requests';
+
+const SAMPLING_SCORE_METRIC_NAMES = ['random', 'entropy'];
 
 function SegmentationApp() {
   // ------------- States for holding the whole data received from the backend ------------------
@@ -57,8 +59,31 @@ function SegmentationApp() {
       segNetId: <int>, pseudoMask: <array>
     }
   */
+  const [imageSamplingScoresFromSelectedSegNetObj, setImageSamplingScoresFromSelectedSegNetObj] = useState({});
+  /*
+    {
+      (imageId) <int>: {
+        (samplingScoreMetric) <str>: <float>,
+        ...
+      }
+    }
+    */
+  const [selectedSamplingScoreMetric, setSelectedSamplingScoreMetric] = useState(SAMPLING_SCORE_METRIC_NAMES[0]);  
   const [ongoingTrainJobExists, setOngoingTrainJobExists] = useState({});    // { (dataset_id) <int>: <bool> }
-  const [segNetTrainConfig, setSegNetTrainConfig] = useState({ numEpochs: 10 });    // TODO: Add more hyperparameters
+  const [segNetTrainConfig, setSegNetTrainConfig] = useState({ numEpochs: 20 });    // TODO: Add more hyperparameters
+
+  // Set up the items for sampling metrics
+  const samplingScoreMetricItems = [];
+  SAMPLING_SCORE_METRIC_NAMES.forEach((samplingScoreMetricName, i) => {
+    const samplingScoreMetricItem =
+      <li key={i}>
+        <a className={"dropdown-item" + (selectedSamplingScoreMetric === samplingScoreMetricName ? ' active' : '')}
+           href="#" onClick={() => setSelectedSamplingScoreMetric(samplingScoreMetricName)}>
+          {samplingScoreMetricName}
+        </a>
+      </li>;
+    samplingScoreMetricItems.push(samplingScoreMetricItem);
+  });
 
   const readAndSetDatasetObjs = async () => {
     const datasetObjsList = await readDatasetObjs();
@@ -151,6 +176,7 @@ function SegmentationApp() {
     const selectedSegNetId = selectedImageInfoObj.segNetId;
     if (selectedSegNetId > 0) {
       const segNetPredObjs = await readSegNetPredObjsOnImage(selectedSegNetId, imageId);
+      console.log(`segNetPredObjs(${selectedSegNetId}, ${imageId}):`, segNetPredObjs);
       if (segNetPredObjs.length > 0) {
         pseudoMaskData = segNetPredObjs[0]['pseudo_mask'].blobs;    // always be one element at maximum
       }
@@ -172,11 +198,22 @@ function SegmentationApp() {
   const handleSegNetItemOnClick = async (segNetId) => {
     const selectedImageId = selectedImageInfoObj.imageId;
 
+    // Read and set sampling scores computed from selected SegNet for all the images
+    const segNetPredObjsWithSamplingScoresOnly = await readSegNetPredObjs(segNetId, true);
+    console.log('segNetPredObjsWithSamplingScoresOnly', segNetPredObjsWithSamplingScoresOnly);
+    const tempImageSamplingScoresFromSelectedSegNetObj = {};
+    for (let segNetPredObj of segNetPredObjsWithSamplingScoresOnly) {
+      const { image_id: imageId, sampling_scores: samplingScoresData } = segNetPredObj;
+      tempImageSamplingScoresFromSelectedSegNetObj[imageId] = samplingScoresData;
+    }
+    setImageSamplingScoresFromSelectedSegNetObj(tempImageSamplingScoresFromSelectedSegNetObj);
+
+    // Read and set pseudo-mask outputted form selected SegNet for the selected image
     let pseudoMaskData = [];
     if (selectedImageId > 0) {
-      const segNetPredObjs = await readSegNetPredObjsOnImage(segNetId, selectedImageId);
-      if (segNetPredObjs.length > 0) {
-        pseudoMaskData = segNetPredObjs[0]['pseudo_mask'].blobs;    // always be one element at maximum
+      const segNetPredObjsOnImage = await readSegNetPredObjsOnImage(segNetId, selectedImageId);
+      if (segNetPredObjsOnImage.length > 0) {
+        pseudoMaskData = segNetPredObjsOnImage[0]['pseudo_mask'].blobs;    // always be one element at maximum
       }
     }
     setSelectedImageInfoObj({
@@ -255,7 +292,11 @@ function SegmentationApp() {
           imageListsNestedObj[datasetId][imageset].forEach((imageObj, i) => {
             const imageId = imageObj.id;
             const imageFilename = imageObj.name;
-            const score = 0.999;    // FIXME later
+            let samplingScore = -1.000;
+            if (imageId in imageSamplingScoresFromSelectedSegNetObj &&
+                selectedSamplingScoreMetric in imageSamplingScoresFromSelectedSegNetObj[imageId]) {
+              samplingScore = imageSamplingScoresFromSelectedSegNetObj[imageId][selectedSamplingScoreMetric].toFixed(3);
+            }
             let activeFlag;
             if (selectedImageInfoObj.imageId === imageId)
               activeFlag = ' active';
@@ -268,7 +309,7 @@ function SegmentationApp() {
               >
                 <div className="d-flex w-100 align-items-center justify-content-between">
                   <span className="mb-1">{ imageFilename }</span>
-                  <strong>{ score }</strong>
+                  <strong>{ samplingScore }</strong>
                 </div>
               </a>;
             tempImageItems[imageset].push(imageItem);
@@ -277,7 +318,7 @@ function SegmentationApp() {
         setImageItems(tempImageItems);
       }
     }
-  }, [datasetObjs, selectedDatasetId, imageListsNestedObj, selectedImageInfoObj]);
+  }, [datasetObjs, selectedDatasetId, imageListsNestedObj, selectedImageInfoObj, selectedSamplingScoreMetric]);
 
   useEffect(() => {
     if (Object.keys(datasetObjs).length > 0) {
@@ -325,11 +366,17 @@ function SegmentationApp() {
     selectedDatasetObj = null; 
   }
 
+  let selectedImageSamplingScoresFromSelectedSegNetObj;
+  if (selectedImageInfoObj.imageId in imageSamplingScoresFromSelectedSegNetObj &&
+      selectedSamplingScoreMetric in imageSamplingScoresFromSelectedSegNetObj[selectedImageInfoObj.imageId]) {
+    selectedImageSamplingScoresFromSelectedSegNetObj =
+      imageSamplingScoresFromSelectedSegNetObj[selectedImageInfoObj.imageId][selectedSamplingScoreMetric].toFixed(3);
+  }
+
   const sortOptionOnChange = (optionIdx) => {
     console.log("sortOptionOnChange", optionIdx);
   };
-
-
+ 
   return (
     <main className="d-flex flex-column h-100">
       <Header
@@ -337,6 +384,8 @@ function SegmentationApp() {
         selectedDatasetItemName={selectedDatasetObj === null ?
                                   'Datasets' :
                                   selectedDatasetObj.name + ' - ' + selectedDatasetObj.domain}
+                                  samplingScoreMetricItems={samplingScoreMetricItems}
+                                  selectedSamplingScoreMetricItemName={selectedSamplingScoreMetric}
       />
       <div className="container">
         <div className="d-flex flex-nowrap">
@@ -348,6 +397,8 @@ function SegmentationApp() {
           <ImageMaskReviewScreen
             selectedDatasetObj={selectedDatasetObj}
             selectedImageInfoObj={selectedImageInfoObj}
+            selectedImageSamplingScoresFromSelectedSegNetObj={selectedImageSamplingScoresFromSelectedSegNetObj}
+            imageSamplingScoresFromSelectedSegNetObj
             createAndSetMask={createAndSetMask}
           />
 

@@ -101,8 +101,8 @@ function ImageMaskReviewScreen(props) {
         <h1 className="h4">Review Screen</h1>
       </div>
       <div className="d-flex justify-content-between">
-        <h2 className="h5">{props.selectedImageInfoObj.imageFilename}</h2>
-        <h2 className="h5">0.999</h2>
+        <h2 className="h5">{ props.selectedImageInfoObj.imageFilename }</h2>
+        <h2 className="h5">{ props.selectedImageSamplingScoresFromSelectedSegNetObj }</h2>
       </div>
 
       <div className="d-flex align-items-center">
