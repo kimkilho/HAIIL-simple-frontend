@@ -17,7 +17,7 @@ const Div = styled.div`
   justify-content: center;
   align-items:center;
   &:hover {
-    border: 1.5px solid #1976d2; 
+    border: 2px solid #1976d2; 
     color: #bbb;
   }
 `;

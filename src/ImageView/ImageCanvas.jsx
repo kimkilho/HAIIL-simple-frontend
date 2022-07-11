@@ -25,10 +25,9 @@ const Div = styled.div`
 const BtmDiv = styled.div`
   width: 100%;
   height: 30px;
-  background-color: #313c4e;
+  background-color: #313c4e; 
   position: absolute;
-  bottom: 0px;
-  border: 1px solid green;
+  bottom: 0px; 
   display: flex;
   justify-content: flex-end;
 `;
@@ -615,6 +614,9 @@ const ImageCanvas = forwardRef((props, ref) => {
         onKeyDown={handleKeyDown.bind(this)}
         ref={props.imgRef}
         tabIndex="0"
+        onTouchStart={handleMouseDown.bind(this)}
+        onTouchEnd={handleMouseLeave.bind(this)}
+        onTouchMove={handleMouseMove.bind(this)}
       >
         <Svg
           className="imageView"
@@ -624,9 +626,12 @@ const ImageCanvas = forwardRef((props, ref) => {
       </Div>
       <BtmDiv>
         <DefaultP>
-          (x:{coord.x} y:{coord.y}) Scale : {(transform.scale * 100).toFixed(0)}%
+          (x:{coord.x} y:{coord.y}) Scale : {(transform.scale * 100).toFixed(0)}
+          %
         </DefaultP>
-        <DefaultP>&nbsp;&nbsp;&nbsp;masks : {props.maskObjs.length}</DefaultP>
+        <DefaultP>
+          &nbsp;&nbsp;&nbsp;masks : {props.maskObjs.length}
+        </DefaultP>
         <Btn
           className="zoom zoom-plus material-icons"
           id="zoom-plus"

@@ -6,8 +6,8 @@ import ImageMaskReviewScreen from './ImageMaskReviewScreen';
 import NetListFooter from './NetListFooter';
 import {
   readDatasetObjs, readImageObjs, readImageBlob, readMaskObjs, createMask,
-  readSegNetObjs, readPredMaskObjs, requestSegNetTrain,
-} from './requests'; 
+  readSegNetObjs, readSegNetPredObjsOnImage, requestSegNetTrain,
+} from './requests';
 
 function SegmentationApp() {
   // ------------- States for holding the whole data received from the backend ------------------
@@ -38,7 +38,7 @@ function SegmentationApp() {
         nonreviewed: [ { id: <int>, dataset_id: <int>, gt_label: <int|null>, gt_mask: <int|null> } ],
       }
     }
-   */ 
+   */
 
   // ------------------ States for HTML elements that depend on the data above -----------------
   const [datasetItems, setDatasetItems] = useState([]);   // [ <HTML element> ]
@@ -49,12 +49,12 @@ function SegmentationApp() {
   // ------------------ States for tracking the currently selected objects ---------------------
   const [selectedDatasetId, setSelectedDatasetId] = useState(1);    // int (default dataset id: 1)
   const [selectedImageInfoObj, setSelectedImageInfoObj] = useState(
-    { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: [], segNetId: 0, predMask: [] }
+    { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: [], segNetId: 0, pseudoMask: [] }
   );
   /*
-    
+    {
       imageset: <string>, imageId: <int>, imageFilename: <string>, imageBlob: <Blob>, mask: <array>,
-      segNetId: <int>, predMask: <array>
+      segNetId: <int>, pseudoMask: <array>
     }
   */
   const [ongoingTrainJobExists, setOngoingTrainJobExists] = useState({});    // { (dataset_id) <int>: <bool> }
@@ -79,7 +79,7 @@ function SegmentationApp() {
       const segNetId = segNetObj.id;
       tempSegNetObjs[segNetId] = segNetObj;
 
-      const jobStatus = segNetObj.status;
+      const jobStatus = segNetObj['job_status'];
       if (!(jobStatus === 'SUCCESS' || jobStatus === 'FAILURE')) {
         repeat = true;
       }
@@ -147,42 +147,42 @@ function SegmentationApp() {
     if (maskObjs.length > 0)
       maskData = maskObjs[maskObjs.length-1].mask.blobs;    // FIXME maybe: load the latest mask
 
-    let predMaskData = [];
+    let pseudoMaskData = [];
     const selectedSegNetId = selectedImageInfoObj.segNetId;
     if (selectedSegNetId > 0) {
-      const predMaskObjs = await readPredMaskObjs(selectedSegNetId, imageId);
-      if (predMaskObjs.length > 0) {
-        predMaskData = predMaskObjs[0].mask.blobs;    // always be one element at maximum
+      const segNetPredObjs = await readSegNetPredObjsOnImage(selectedSegNetId, imageId);
+      if (segNetPredObjs.length > 0) {
+        pseudoMaskData = segNetPredObjs[0]['pseudo_mask'].blobs;    // always be one element at maximum
       }
     }
 
     setSelectedImageInfoObj({
       ...selectedImageInfoObj,
       imageset: imageset, imageId: imageId, imageFilename: imageFilename, imageBlob: imageBlob,
-      mask: maskData, predMask: predMaskData,
+      mask: maskData, pseudoMask: pseudoMaskData,
     });
   }
 
   const clearSelectedImageInfoObj = () => {
     setSelectedImageInfoObj(
-      { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: [], segNetId: 0, predMask: [] }
+      { imageset: '', imageId: 0, imageFilename: '', imageBlob: null, mask: [], segNetId: 0, pseudoMask: [] }
     );
   };
 
   const handleSegNetItemOnClick = async (segNetId) => {
     const selectedImageId = selectedImageInfoObj.imageId;
 
-    let predMaskData = [];
+    let pseudoMaskData = [];
     if (selectedImageId > 0) {
-      const predMaskObjs = await readPredMaskObjs(segNetId, selectedImageId);
-      if (predMaskObjs.length > 0) {
-        predMaskData = predMaskObjs[0].mask.blobs;    // always be one element at maximum
+      const segNetPredObjs = await readSegNetPredObjsOnImage(segNetId, selectedImageId);
+      if (segNetPredObjs.length > 0) {
+        pseudoMaskData = segNetPredObjs[0]['pseudo_mask'].blobs;    // always be one element at maximum
       }
     }
     setSelectedImageInfoObj({
       ...selectedImageInfoObj,
       segNetId: segNetId,
-      predMask: predMaskData,
+      pseudoMask: pseudoMaskData,
     })
   };
 
@@ -292,7 +292,7 @@ function SegmentationApp() {
         for (let segNetId in segNetListsNestedObj[selectedDatasetId]) {
           segNetId = parseInt(segNetId);    // NOTE: This must be added because for...in loop automatically converts the iterator to string
           const { name: segNetName, version: segNetVersion, train_mask_ids: trainMaskIds,
-                  job_id: jobId, status: jobStatus } = segNetListsNestedObj[selectedDatasetId][segNetId];
+                  job_id: jobId, job_status: jobStatus } = segNetListsNestedObj[selectedDatasetId][segNetId];
 
           let trainSetSize = 0;
           if (trainMaskIds !== null) {
@@ -360,7 +360,7 @@ function SegmentationApp() {
         handleSegNetTrainConfigChange={handleSegNetTrainConfigChange}
         handleSegNetTrainConfigSubmit={handleSegNetTrainConfigSubmit}
       />
-    </main> 
+    </main>
   );
 }
 

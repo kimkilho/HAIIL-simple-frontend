@@ -28,16 +28,10 @@ const readSegNetObjs = async (datasetId) => {
   );
 };
 
-const readPredMaskObjs = async (segNetId, imageId = null) => {
-  if (imageId !== null) {
-    return await sendGETRequestAndGetJsonResponseData(
-      `/api/segnets/${segNetId}/images/${imageId}/predmasks/`, 'GET',
-    );
-  } else {
-    return await sendGETRequestAndGetJsonResponseData(
-      `/api/segnets/${segNetId}/predmasks/`, 'GET',
-    );
-  }
+const readSegNetPredObjsOnImage = async (segNetId, imageId) => {
+  return await sendGETRequestAndGetJsonResponseData(
+    `/api/segnets/${segNetId}/images/${imageId}/segnetpreds/`, 'GET',
+  );
 };
 
 const readImageObjs = async (datasetId, task = 'classification', reviewed = false) => {
@@ -149,4 +143,4 @@ const requestSegNetTrain = async (datasetName, domainName, predOutputType = 'mas
 
 export { readDatasetObjs, readDatasetObj, readImageObjs, readImageBlob,
          readLabelObjs, readMaskObjs, createLabel, createMask,
-         readSegNetObjs, readPredMaskObjs, requestSegNetTrain, };
+         readSegNetObjs, readSegNetPredObjsOnImage, requestSegNetTrain, };

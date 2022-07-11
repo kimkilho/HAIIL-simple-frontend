@@ -11,7 +11,7 @@ import Slider from "./buttons/Slider";
 const Main = styled.main`
   width: 100%;
   height: 60vh;
-  background-color: #212936;
+  background-color: #212936; 
   font-family: 'Roboto', sans-serif;
 `; 
 const Inner = styled.div`
@@ -159,7 +159,9 @@ const ImageSection = forwardRef((props, ref) => {
     <Main className="imageSection">
       <Inner className="inner">
         <ImageControl className="image-control">
-          <DefaultP>&nbsp;&nbsp;Thickness&nbsp;:</DefaultP>
+          <DefaultP>
+            &nbsp;&nbsp;Thickness&nbsp;:
+          </DefaultP>
           <Slider
             min="1"
             max="100"

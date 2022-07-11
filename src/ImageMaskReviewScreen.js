@@ -74,11 +74,11 @@ function ImageMaskReviewScreen(props) {
         })
 
         // Load and draw existing predMask (if any) and put its data into tempMaskObjs
-        const existingPredMaskData = props.selectedImageInfoObj.predMask;
-        console.log("Draw existing predMask (if any)", existingPredMaskData);
-        const endIdx = Object.keys(tempMaskObjs).length;   
-        existingPredMaskData.forEach((existingPredMaskDataElem, idx) => {
-          const { classId, data } = existingPredMaskDataElem;
+        const existingPseudoMaskData = props.selectedImageInfoObj.pseudoMask;
+        console.log("Draw existing pseudoMask (if any)", existingPseudoMaskData);
+        const endIdx = Object.keys(tempMaskObjs).length;
+        existingPseudoMaskData.forEach((existingPseudoMaskDataElem, idx) => {
+          const { classId, data } = existingPseudoMaskDataElem;
           classColor = MASK_COLORS[classId-1];
           tempMaskObjs.push(new Blob(
             endIdx+idx, classId, classColor, 'predict', 1, data, null,
