@@ -45,8 +45,7 @@ export class Blob {
       "http://www.w3.org/2000/svg",
       "polyline"
     );
-    poly.style.strokeLinejoin = "round";
-    console.log(this.thickness);
+    poly.style.strokeLinejoin = "round"; 
     poly.style.strokeWidth = this.thickness.toString(); 
     poly.style.shapeRendering = "crispEdges";
     poly.style.strokeLinecap = "round";

@@ -96,7 +96,7 @@ const ImageSection = forwardRef((props, ref) => {
   const [classIdx, setClassIdx] = useState(0);
   const [strokethickness, setStrokeThickness] = useState(5);
   const [threshold, setThreshold] = useState(100);
-  const [isvisiblePseudoMask, setIsvisiblePseudoMask] = useState(false);
+  const [isvisiblePseudoMask, setIsvisiblePseudoMask] = useState(true);
 
   var classes = [
     new ImgClass(1, "", "#DB7093"),
@@ -139,7 +139,6 @@ const ImageSection = forwardRef((props, ref) => {
   ];
 
   useEffect(() => {
-    console.log("isvisiblePseudoMask", isvisiblePseudoMask);
     canvasRef.current.updateVisible();
   }, [isvisiblePseudoMask]);
 
@@ -162,8 +161,28 @@ const ImageSection = forwardRef((props, ref) => {
       {
         var obj = mask.convertSVG();
         canvasRef.current.addObj(obj);
+        // if(isvisiblePseudoMask)
+        // { 
+        //   var obj = mask.convertSVG();
+        //   canvasRef.current.addObj(obj);
+        // }
+        // else{
+        //   if(mask.type === "predict")
+        //   {
+        //     var obj = mask.convertSVG();
+        //     canvasRef.current.addObj(obj);
+        //   }
+        //   else
+        //   {
+        //     var obj = mask.convertSVG();
+        //     canvasRef.current.addbackUpObj(obj, mask, mask.no);
+        //   }
+        // } 
       }
+      canvasRef.current.updateVisible();
+      setIsvisiblePseudoMask(isvisiblePseudoMask);
     } 
+    
   }
 
   const handlePseudoOnChange = (e) => {
@@ -224,6 +243,7 @@ const ImageSection = forwardRef((props, ref) => {
               type="checkbox"
               role="switch"
               id="flexSwitchCheckDefault"
+              checked={isvisiblePseudoMask}
               onChange={handlePseudoOnChange.bind(this)}
             />
             <label className="form-check-label d-flex align-items-center mt-1 mx-1" style={{color:"#afbdd1", fontSize:"14px"}} htmlFor="flexSwitchCheckDefault">

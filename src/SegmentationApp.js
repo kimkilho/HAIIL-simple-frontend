@@ -238,6 +238,13 @@ function SegmentationApp() {
   }
 
   const requestSegNetTrainOnSelectedDataset = async () => {
+    const reivewedCnt = imageListsNestedObj[selectedDatasetId]['reviewed'].length;
+    if(reivewedCnt < 12)
+    {
+      alert('A minimum of 12 images must be reviewed.');
+      return;
+    } 
+    
     const { name: datasetName, domain: domainName } = datasetObjs[selectedDatasetId];
     const { numEpochs } = segNetTrainConfig;
     const responseData = await requestSegNetTrain(datasetName, domainName, 'mask', numEpochs);

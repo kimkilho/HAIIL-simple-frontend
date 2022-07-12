@@ -39,6 +39,28 @@ function ImageMaskReviewScreen(props) {
       { blobs: maskObjs }    // NOTE: Should put maskObjs array into an object to pass it as a JSON data
     );
   };
+  const handleConvertButtonOnClick = () => {  
+    const { id, name, domain, classes } = props.selectedDatasetObj;
+    const imageFilename = props.selectedImageInfoObj.imageFilename;
+    
+    if(maskObjs.length > 0)
+    {
+      maskObjs.forEach(mask => {
+        if(mask.type === "predict")
+        {
+          mask.type = "polygon";
+        } 
+      }); 
+      setMaskObjs(...maskObjs); 
+      imgSectionRef.current.clearCanvas();
+      imgSectionRef.current.applyExistingMasks();
+      
+      props.createAndSetMask(
+        id, name, domain, imageFilename,
+        { blobs: maskObjs }    // NOTE: Should put maskObjs array into an object to pass it as a JSON data
+      );
+    }
+  };
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -101,8 +123,10 @@ function ImageMaskReviewScreen(props) {
         <h1 className="h4">Review Screen</h1>
       </div>
       <div className="d-flex justify-content-between">
-        <h2 className="h5">{ props.selectedImageInfoObj.imageFilename }</h2>
-        <h2 className="h5">{ props.selectedImageSamplingScoresFromSelectedSegNetObj }</h2>
+        <h2 className="h5">{props.selectedImageInfoObj.imageFilename}</h2>
+        <h2 className="h5">
+          {props.selectedImageSamplingScoresFromSelectedSegNetObj}
+        </h2>
       </div>
 
       <div className="d-flex align-items-center">
@@ -116,14 +140,25 @@ function ImageMaskReviewScreen(props) {
           setMaskObjs={setMaskObjs}
         />
       </div>
-      <div className="d-flex btn-toolbar align-items-center mt-1">
-        <button
-          type="button"
-          className="col-sm-12 btn btn-lg btn-outline-primary"
-          onClick={handleSubmitButtonOnClick}
-        >
-          SUBMIT
-        </button>
+      <div className="d-flex">
+        <div className="d-flex btn-toolbar align-items-center mt-1 me-1" style={{width:"100%"}}>
+          <button
+            type="button"
+            className="col-sm-12 btn btn-lg btn-outline-primary shadow-none"
+            onClick={handleConvertButtonOnClick}
+          >
+            CONVERT
+          </button>
+        </div>
+        <div className="d-flex btn-toolbar align-items-center mt-1 ms-1" style={{width:"100%"}}>
+          <button
+            type="button"
+            className="col-sm-12 btn btn-lg btn-outline-primary shadow-none" 
+            onClick={handleSubmitButtonOnClick}
+          >
+            SUBMIT
+          </button>
+        </div>
       </div>
     </MainDiv>
   );

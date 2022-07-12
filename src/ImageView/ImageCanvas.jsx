@@ -70,6 +70,7 @@ const ImageCanvas = forwardRef((props, ref) => {
     changedToolforClass,
     applyStrokeThreshold,
     addObj,
+    addbackUpObj,
     clearCanvas,
     zoomFit,
     updateVisible,
@@ -96,6 +97,18 @@ const ImageCanvas = forwardRef((props, ref) => {
     applyTransform();
   },[transform]) 
 
+  // useEffect(()=> { 
+  //   if (!props.isVisiblePseudo) {
+
+  //   } else {
+  //     console.log("backupObjs objs", backupObjs, drawingObjs);
+  //     backupObjs.forEach((e) => {
+  //       removeObjbyNo(e.obj, e.idx);
+  //     });
+  //     reNumbering();
+  //   } 
+  // },[backupObjs]) 
+
   useEffect(()=> { 
     circleCursor.setAttribute("cx", coord.x);
     circleCursor.setAttribute("cy", coord.y);
@@ -108,12 +121,19 @@ const ImageCanvas = forwardRef((props, ref) => {
       props.svgRef.current.removeChild(props.svgRef.current.firstChild);
     }
     drawingObjs.splice(0, drawingObjs.length);
+    backupObjs.splice(0,backupObjs.length);
   }
 
-  function addObj(obj) {
+  function addObj(obj) { 
     drawingObjs.push(obj);
     props.svgRef.current.appendChild(drawingObjs[drawingObjs.length - 1]);
-    setDrawingObjs(drawingObjs);
+    setDrawingObjs(drawingObjs); 
+  }
+
+  function addbackUpObj(obj, mask, idx)
+  { 
+    backupObjs.push({obj:obj, blob:mask, idx: idx}); 
+    setBackupobjs(backupObjs); 
   }
  
   function changedToolforClass() {
@@ -163,22 +183,31 @@ const ImageCanvas = forwardRef((props, ref) => {
   function updateVisible() { 
     if(!props.isVisiblePseudo)
     {
-      // drawingObjs.forEach((e, index) => {
-      //   console.log(props.maskObjs[index]);
-      //   if (props.maskObjs[index].type === "predict") {
-      //     backupObjs.push(e);
-      //     console.log("remove check",backupObjs);
-      //     removeObj(e, index);
-      //   }
-      // });
+      let tempBackupObjs = [];  
+      drawingObjs.forEach((e, index) => {
+        if (props.maskObjs[index].type === "predict") {
+          tempBackupObjs.push({obj:e, blob:props.maskObjs[index], idx: props.maskObjs[index].no});
+        }
+      });
+      setBackupobjs(tempBackupObjs); 
+      tempBackupObjs.forEach((e) => {
+        removeObjbyNo(e.obj, e.idx);
+      });
+      reNumbering();  
     }
     else
     {
-      // console.log("add check",backupObjs);
-      // backupObjs.forEach(e => {
-      //   addObj(e);
-      // });
-      // backupObjs.splice(0,backupObjs.length);
+      if(backupObjs.length > 0)
+      {  
+        backupObjs.forEach(e => {
+          var b = e.blob;
+          b.no = drawingObjs.length;
+          props.maskObjs.push(b);  
+          addObj(e.obj); 
+        }); 
+        backupObjs.splice(0,backupObjs.length);
+        setBackupobjs(backupObjs);
+      }
     } 
   }
   
@@ -533,8 +562,23 @@ const ImageCanvas = forwardRef((props, ref) => {
     drawingObjs.splice(target, 1);
     setDrawingObjs(drawingObjs);
     props.maskObjs.splice(index, 1);
+    reNumbering();
   }
-   
+
+  function removeObjbyNo(target, idx) {
+    props.svgRef.current.removeChild(target);
+    drawingObjs.splice(target, 1);
+    setDrawingObjs(drawingObjs); 
+    var tempidx = props.maskObjs.findIndex(i=>i.no === idx);
+    props.maskObjs.splice(tempidx,1);
+  }
+
+  function reNumbering()
+  {
+    props.maskObjs.forEach((mask,index)=>{
+      mask.no = index;
+    })
+  }
 
   function handleWheel(e) {
     var xs = (e.clientX - transform.x) / transform.scale,
