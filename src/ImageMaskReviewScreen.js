@@ -39,26 +39,25 @@ function ImageMaskReviewScreen(props) {
       { blobs: maskObjs }    // NOTE: Should put maskObjs array into an object to pass it as a JSON data
     );
   };
-  const handleConvertButtonOnClick = () => {  
+
+  const handleConvertButtonOnClick = () => {
     const { id, name, domain, classes } = props.selectedDatasetObj;
     const imageFilename = props.selectedImageInfoObj.imageFilename;
     
-    if(maskObjs.length > 0)
-    {
+    if (maskObjs.length > 0) {
       maskObjs.forEach(mask => {
-        if(mask.type === "predict")
-        {
+        if (mask.type === "predict") {
           mask.type = "polygon";
         } 
-      }); 
-      setMaskObjs(...maskObjs); 
+      });
+      setMaskObjs(maskObjs);
       imgSectionRef.current.clearCanvas();
       imgSectionRef.current.applyExistingMasks();
-      
-      props.createAndSetMask(
-        id, name, domain, imageFilename,
-        { blobs: maskObjs }    // NOTE: Should put maskObjs array into an object to pass it as a JSON data
-      );
+
+      // props.createAndSetMask(
+      //   id, name, domain, imageFilename,
+      //   { blobs: maskObjs }    // NOTE: Should put maskObjs array into an object to pass it as a JSON data
+      // );
     }
   };
 
