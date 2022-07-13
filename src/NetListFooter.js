@@ -21,7 +21,7 @@ function NetListFooter(props) {
   return (
     <footer className="footer mt-auto py-3 bg-light">
       <div className="container px-3 py-2">
-        <div className="d-flex flex-wrap justify-content-start align-items-center py-3 my-0 border-top">
+        <div className="d-flex justify-content-start align-items-center py-3 my-0 border-top">
           <div className="d-flex flex-column col-md-1 d-flex align-items-center">
             <div className="mb-3 mb-md-0 text-black">Networks</div>
             <button type="button" className="btn btn-info" onClick={props.requestSegNetTrainOnSelectedDataset}>
@@ -54,8 +54,10 @@ function NetListFooter(props) {
               </div>
             </div>
           </div>
-          <div className="d-flex overflow-auto">
-            { props.segNetItems }
+          <div className='row nav-row px-3' style={{width:"100%"}}>
+            <div className="d-flex overflow-auto">
+              { props.segNetItems }
+            </div>
           </div>
         </div>
       </div>

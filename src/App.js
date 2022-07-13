@@ -1,51 +1,23 @@
 import { Link } from "react-router-dom";
 import "./App.css";
-import styled from "styled-components";
-
-const Img = styled.img`
-  justify-content: center;
-  text-align: center;
-  display: block;
-  margin: 50px auto 10px;
-`;
-const H1 = styled.h1` 
-  text-align: center;
-  display: block;
-`;
-const CustomLink = styled(Link)`
-  text-decoration: none;
-  color: black;
-  text-align: center;
-  display: block;
-  font-weight: 500;
-  width: 100px;
-  &:hover {
-    transform: scale(1.1);
-    font-weight: 700;
-    transition: transform 0.3s;
-  }
-`;
-const Div = styled.div`
-  display: flex;
-  justify-content: center;
-`;
 
 function App() {
   return (
     <div>
-      <Img src={require("./HAIIL.png")} alt="logo" />
-      <H1>HAIIL testbed (minimal)</H1>
+      <img className="d-block text-center justify-content-center mx-auto mt-5 mb-3" src={require("./HAIIL.png")} alt="logo" />
+      <h1 className="d-block text-center">HAIIL testbed (minimal)</h1>
       <nav
         style={{
           borderBottom: "solid 1px",
           paddingBottom: "1rem",
         }}
       >
-        <Div>
-          <CustomLink to="/classification">Classification</CustomLink>
-          &nbsp;&nbsp;|&nbsp;&nbsp;{" "}
-          <CustomLink to="/segmentation">Segmentation</CustomLink>
-        </Div>
+        <div className="d-flex justify-content-center my-1"> 
+          
+          <a href="/classification" className="btn btn-outline-primary">Classification</a> 
+         <div className="mx-2" style={{borderRight:"1px solid black", width:"0.1px", height:"auto"}}></div>
+          <a href="/segmentation" className="btn btn-outline-primary">Segmentation</a>
+        </div>
       </nav>
     </div>
   );
